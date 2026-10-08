@@ -1,0 +1,85 @@
+# Pages CMS configuration: https://pagescms.org/docs/
+media:
+  - name: cases
+    label: Case images
+    input: media/cases
+    output: /media/cases
+    extensions: [png, jpg, jpeg, gif, webp]
+
+content:
+  - name: cases
+    label: Cases
+    type: collection
+    path: content/cases
+    format: yaml
+    filename: "{primary}.yml"
+    view:
+      primary: title
+      fields: [title, section, date, draft]
+      sort: date
+      order: desc
+    fields:
+      - name: title
+        label: Case title
+        type: string
+        required: true
+        description: Shown in lists and search. Keep the diagnosis out of it to use the case as an unknown.
+      - name: section
+        label: Section
+        type: select
+        required: true
+        options:
+          values:
+            - { name: neuro, label: Neuro }
+            - { name: hn, label: Head & Neck }
+            - { name: chest, label: Chest }
+            - { name: cardiac, label: Cardiac }
+            - { name: vascular, label: Vascular }
+            - { name: body, label: Abdomen & Pelvis }
+            - { name: msk, label: MSK }
+            - { name: breast, label: Breast }
+            - { name: peds, label: Pediatrics }
+            - { name: nm, label: Nuclear Medicine }
+      - name: modality
+        label: Modality
+        type: string
+        description: Comma-separated, e.g. CT, MRI
+      - name: date
+        label: Date added
+        type: date
+      - name: images
+        label: Images
+        type: object
+        list: true
+        description: First image is the cover. De-identified images only.
+        fields:
+          - name: image
+            label: Image
+            type: image
+            options:
+              media: cases
+          - name: caption
+            label: Caption
+            type: string
+      - name: history
+        label: Clinical history
+        type: text
+      - name: findings
+        label: Imaging findings
+        type: text
+        description: Leave a blank line between paragraphs.
+      - name: diagnosis
+        label: Diagnosis
+        type: string
+        description: Hidden until the reader reveals it.
+      - name: discussion
+        label: Discussion
+        type: text
+        description: Teaching points, differential, pitfalls. Hidden with the diagnosis.
+      - name: references
+        label: References
+        type: text
+        description: One per line. Full URLs become links.
+      - name: draft
+        label: Draft (hide from the site)
+        type: boolean

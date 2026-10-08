@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>RadEssential</title>
+<meta name="description" content="Radiology quick reference: classifications, node stations, incidental-finding algorithms, calculators and teaching cases, each cited to its primary source.">
+<meta property="og:title" content="RadEssential">
+<meta property="og:description" content="The classifications radiologists look up mid-read.">
+<meta property="og:image" content="/img/sec-brain.webp">
+<link rel="icon" type="image/png" href="/img/owl.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<header class="top">
+  <button class="menu-btn" id="menuBtn" aria-label="Open index"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  <a class="brand" href="#"><img src="img/owl.png" alt=""><b>RadEssential</b><small>Reading-room reference</small></a>
+  <div class="search">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+    <input id="q" type="search" placeholder="Search: Le Fort, Bosniak, node levels, washout…" autocomplete="off" aria-label="Search references">
+    <kbd>/</kbd>
+    <div class="results" id="results" hidden></div>
+  </div>
+</header>
+<div class="shell">
+  <nav class="nav" id="nav" aria-label="Index"></nav>
+  <main id="view"></main>
+</div>
+
+<div id="lb" class="lb" hidden role="dialog" aria-modal="true" aria-label="Image viewer">
+  <button type="button" class="lbx" aria-label="Close">✕</button>
+  <button type="button" class="lbnav prev" data-d="-1" aria-label="Previous image">‹</button>
+  <figure><img alt=""><figcaption><span class="lbcap"></span><span class="lbn"></span></figcaption></figure>
+  <button type="button" class="lbnav next" data-d="1" aria-label="Next image">›</button>
+</div>
+<script>window.RAD_STATIC=true;</script>
+<script src="/assets/app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+title: Example case (template)
+section: neuro
+modality: CT, CTA
+date: 2026-10-07
+images: []
+history: |-
+  Replace with the clinical history.
+findings: |-
+  Describe the imaging findings.
+
+  Leave a blank line to start a new paragraph.
+diagnosis: Replace with the diagnosis
+discussion: |-
+  Teaching points and differential.
+references: |-
+  https://radiopaedia.org
+draft: true

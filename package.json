@@ -1,0 +1,12 @@
+{
+  "name": "radessential",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "preview": "npm run build && npx --yes serve dist"
+  },
+  "dependencies": {
+    "js-yaml": "4.1.0"
+  }
+}
