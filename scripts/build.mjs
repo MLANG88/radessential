@@ -9,7 +9,7 @@ const SECTIONS = ['neuro', 'hn', 'chest', 'cardiac', 'vascular', 'body', 'msk', 
 
 fs.rmSync(dist, { recursive: true, force: true });
 fs.mkdirSync(path.join(dist, 'data'), { recursive: true });
-for (const item of ['index.html', 'assets', 'img', 'media', '_headers', '_redirects']) {
+for (const item of ['index.html', 'assets', 'img', 'anatomy', 'media', '_headers', '_redirects']) {
   const from = path.join(root, item);
   if (fs.existsSync(from)) fs.cpSync(from, path.join(dist, item), { recursive: true });
 }

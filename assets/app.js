@@ -742,17 +742,18 @@ function onCases(){
 
 /* ---------- nav ---------- */
 let openSecs=store.get('open',['pinned','cases']);
-let NAV={entry:null,caseSec:null};
+let NAV={entry:null,caseSec:null,anat:null};
 function renderNav(){
   const nav=document.getElementById('nav'),cur=NAV.entry;
   const curSec=cur?byId[cur].sec:null;
-  const want=[curSec,NAV.caseSec?'cases':null].filter(Boolean).filter(s=>!openSecs.includes(s));
+  const want=[curSec,NAV.caseSec?'cases':null,NAV.anat?'anatomy':null].filter(Boolean).filter(s=>!openSecs.includes(s));
   if(want.length){openSecs=[...openSecs,...want];store.set('open',openSecs)}
   const chev=`<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3l5 5-5 5"/></svg>`;
   const grp=(id,name,list,isCur)=>`<details class="grp" data-sec="${id}"${openSecs.includes(id)?' open':''}><summary><span>${name}</span><span class="cnt">${list.length}</span>${chev}</summary><div class="items">${list.map(e=>`<a href="#${e.id}" class="${isCur(e)?'cur':''}">${e.title}</a>`).join('')}</div></details>`;
-  let h=`<a class="home${!cur&&!NAV.caseSec?' cur':''}" href="#">Index</a><div class="navtools"><button type="button" id="expAll">Expand all</button><button type="button" id="colAll">Collapse all</button></div>`;
+  let h=`<a class="home${!cur&&!NAV.caseSec&&!NAV.anat?' cur':''}" href="#">Index</a><div class="navtools"><button type="button" id="expAll">Expand all</button><button type="button" id="colAll">Collapse all</button></div>`;
   if(pins.length)h+=grp('pinned','Pinned',pins.filter(id=>byId[id]).map(id=>byId[id]),e=>e.id===cur);
   SECTIONS.forEach(s=>{const list=s.id==='calc'?[...inSec('calc'),...CALC_LINKS.map(i=>byId[i])]:inSec(s.id);h+=grp(s.id,s.name,list,e=>e.id===cur&&s.id===e.sec)});
+  h+=`<details class="grp cases-grp" data-sec="anatomy"${openSecs.includes('anatomy')?' open':''}><summary><span>Anatomy</span><span class="cnt">${ATLAS.length}</span>${chev}</summary><div class="items">${ATLAS.map(a=>`<a href="#anatomy-${a.id}" class="${NAV.anat===a.id?'cur':''}">${a.title}</a>`).join('')}</div></details>`;
   const n=casesState==='ready'?CASES.length:'';
   h+=`<details class="grp cases-grp" data-sec="cases"${openSecs.includes('cases')?' open':''}><summary><span>Cases</span><span class="cnt">${n}</span>${chev}</summary><div class="items">
     <a href="#cases" class="${NAV.caseSec==='all'?'cur':''}">All cases</a>
@@ -790,6 +791,8 @@ function home(){
   <div class="sechead"><h2>Reference</h2></div>
   <div class="secs">${SECTIONS.filter(s=>s.id!=='calc').map(s=>`<section class="sec">${COVER(s.name,inSec(s.id).length,SEC_IMG[s.id])}<ul>${inSec(s.id).map(e=>`<li><a href="#${e.id}">${e.title}<small>${e.ver}</small></a></li>`).join('')}</ul></section>`).join('')}
   <section class="sec">${COVER('Calculators',E.filter(e=>e.init).length,null)}<ul>${E.filter(e=>e.init).map(e=>`<li><a href="#${e.id}">${e.title}<small>${secName(e.sec)}</small></a></li>`).join('')}</ul></section></div>
+  <div class="sechead"><h2>Anatomy</h2><a href="#anatomy">All atlases →</a></div>
+  <div class="anat-cards">${ATLAS.map(a=>`<a class="csec" href="#anatomy-${a.id}">${COVER(a.title,'',a.img)}<span class="anat-sub">${a.sub}</span></a>`).join('')}</div>
   <div class="sechead"><h2>Cases</h2><a href="#cases">All cases →</a></div>
   <div class="csecs">${CASE_SECS.map(s=>`<a class="csec" href="#cases-${s.id}">${COVER(s.name,casesState==='ready'?casesIn(s.id).length:'',CASE_IMG[s.id])}</a>`).join('')}</div>
   ${footer()}</div>`;
@@ -989,11 +992,297 @@ const lbMove=d=>{LB.i=(LB.i+d+LB.list.length)%LB.list.length;lbShow()};
 lb.addEventListener('click',ev=>{const b=ev.target.closest('button');if(b){if(b.classList.contains('lbx'))lb.hidden=true;else lbMove(+b.dataset.d);return}if(ev.target===lb)lb.hidden=true});
 document.addEventListener('keydown',ev=>{if(lb.hidden)return;if(ev.key==='Escape')lb.hidden=true;else if(ev.key==='ArrowRight')lbMove(1);else if(ev.key==='ArrowLeft')lbMove(-1)});
 
+/* ---------- anatomy viewer ---------- */
+const ATLAS=[
+ {id:'ct-chest',title:'CT chest',sub:'Contrast-enhanced CT angiogram, neck base to upper abdomen · 1.5 mm',img:'thoracic',
+  presets:[['Angio',700,200],['Mediastinum',350,40],['Lung',1500,-600],['Bone',1800,400]],defCats:['art','vein','heart','lung','gi','solid','endo','cns'],start:'Heart'},
+ {id:'ct-abdomen',title:'CT abdomen and pelvis',sub:'Non-contrast CT, lung bases to proximal femurs · 3 mm slices',img:'abdomen',
+  presets:[['Soft tissue',400,50],['Narrow',250,40],['Bone',1800,400],['Lung',1500,-600]],defCats:['art','vein','gi','solid','gu','endo','muscle','cns'],start:'Pancreas'}
+];
+const lcName=n=>/^[A-Z]\d/.test(n)?n:n.charAt(0).toLowerCase()+n.slice(1);
+const ATLAS_BY=Object.fromEntries(ATLAS.map(a=>[a.id,a]));
+const ANAT_CACHE={};
+let ANAT=null;
+async function anatLoad(id,onProgress){
+  if(ANAT_CACHE[id])return ANAT_CACHE[id];
+  const base='anatomy/'+id+'/';
+  const meta=await (await fetch(base+'meta.json')).json();
+  const [Z,H,W]=meta.shape,cols=meta.cols;
+  const get=async(f,label)=>{
+    const r=await fetch(base+f);if(!r.ok)throw new Error(f+' '+r.status);
+    const total=+r.headers.get('content-length')||0;let got=0;
+    const rd=r.body.getReader(),parts=[];
+    for(;;){const {done,value}=await rd.read();if(done)break;parts.push(value);got+=value.length;if(total)onProgress(label,Math.min(1,got/total))}
+    const bmp=await createImageBitmap(new Blob(parts,{type:'image/png'}),{colorSpaceConversion:'none',premultiplyAlpha:'none'});
+    const c=document.createElement('canvas');c.width=bmp.width;c.height=bmp.height;const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(bmp,0,0);
+    const px=g.getImageData(0,0,c.width,c.height).data,out=new Uint8Array(Z*H*W);
+    for(let z=0;z<Z;z++){const r0=Math.floor(z/cols)*H,c0=(z%cols)*W;for(let y=0;y<H;y++){let si=((r0+y)*c.width+c0)*4,di=(z*H+y)*W;for(let x=0;x<W;x++,si+=4)out[di+x]=px[si]}}
+    return out;
+  };
+  const ct=await get('ct.png','Loading CT');
+  const lab=await get('labels.png','Loading labels');
+
+  const S={};meta.structures.forEach(s=>S[s.id]=s);
+  // per-label per-slice area, best slice
+  const area=new Uint32Array(256*Z);
+  for(let z=0;z<Z;z++){const off=z*H*W;for(let i=0;i<H*W;i++){const l=lab[off+i];if(l)area[l*Z+z]++}}
+  meta.structures.forEach(s=>{let b=0,bz=0;for(let z=0;z<Z;z++){const a=area[s.id*Z+z];if(a>b){b=a;bz=z}}s.best=bz;s.maxArea=b});
+  // vertebral level per slice
+  const verts=meta.structures.filter(s=>/^(C|T|L|S)\d+ vertebra$/.test(s.name));
+  const level=new Array(Z).fill('');
+  for(let z=0;z<Z;z++){let b=0;verts.forEach(v=>{const a=area[v.id*Z+z];if(a>b){b=a;level[z]=v.name.split(' ')[0]}})}
+  // coronal scout through the body centre
+  const midY=Math.round(H*0.52);
+  const scout=new Uint8Array(Z*W);
+  for(let z=0;z<Z;z++)for(let x=0;x<W;x++){let m=0;for(let y=midY-3;y<=midY+3;y++){const v=ct[z*H*W+y*W+x];if(v>m)m=v}scout[(Z-1-z)*W+x]=m}
+  const lut=new Float32Array(meta.lut);
+  return ANAT_CACHE[id]={meta,ct,lab,S,area,level,scout,lut,Z,H,W};
+}
+
+function anatomyHome(){
+  V().innerHTML=`<div class="wrap wide">
+  <header class="ebanner"${IMGV('brain')}><div class="crumb"><a href="#">Index</a> / Anatomy</div><div class="ehead"><h1>Cross-sectional anatomy</h1></div></header>
+  <p class="lede">Scroll through a full CT and hover over anything to name it. Every structure is outlined on every slice, with a quiz mode to test yourself.</p>
+  <div class="anat-cards">${ATLAS.map(a=>`<a class="csec" href="#anatomy-${a.id}">${COVER(a.title,'',a.img)}<span class="anat-sub">${a.sub}</span></a>`).join('')}</div></div>`;
+}
+
+function anatomyView(id){
+  const A=ATLAS_BY[id];const v=V();
+  v.innerHTML=`<div class="wrap wide anat">
+  <header class="ebanner"${IMGV(A.img)}><div class="crumb"><a href="#">Index</a> / <a href="#anatomy">Anatomy</a></div>
+  <div class="ehead"><h1>${A.title}</h1></div><div class="meta"><span class="tag v">Interactive atlas</span><span class="tag">${A.sub}</span></div></header>
+  <div class="anat-bar">
+    <div class="seg" role="group" aria-label="Window">${A.presets.map((p,i)=>`<button type="button" data-win="${i}" aria-pressed="${i===0}">${p[0]}</button>`).join('')}</div>
+    <div class="seg" role="group" aria-label="Labels"><button type="button" data-lab="all" aria-pressed="true">All labels</button><button type="button" data-lab="hover" aria-pressed="false">Hover only</button></div>
+    <button type="button" class="btn" id="an-quiz" aria-pressed="false">Quiz me</button>
+    <div class="an-search"><input id="an-q" type="search" placeholder="Find a structure…" autocomplete="off" aria-label="Find a structure"><div class="an-res" id="an-res" hidden></div></div>
+  </div>
+  <div class="anat-grid">
+    <div class="an-stage" id="an-stage" tabindex="0" aria-label="CT viewer. Scroll or use arrow keys to change slice">
+      <canvas id="an-cv"></canvas>
+      <div class="an-hud"><span id="an-pos">Loading…</span><span id="an-lvl"></span></div>
+      <div class="an-tip" id="an-tip" hidden></div>
+      <div class="an-load" id="an-load"><div class="an-prog"><i id="an-pbar"></i></div><span id="an-ptxt">Loading CT…</span></div>
+      <div class="an-quiz" id="an-qz" hidden></div>
+    </div>
+    <aside class="an-side">
+      <div class="an-scoutwrap"><canvas id="an-scout"></canvas><div class="an-scap">Coronal scout · drag to move</div></div>
+      <input type="range" id="an-range" min="0" max="1" value="0" aria-label="Slice">
+      <div class="an-cats" id="an-cats"></div>
+      <div class="an-listh"><span>On this slice</span><span id="an-cnt"></span></div>
+      <div class="an-list" id="an-list"></div>
+    </aside>
+  </div>
+  <p class="foot">CT data and structure masks: TotalSegmentator (Wasserthal J, et al. Radiol Artif Intell 2023;5:e230024), Apache-2.0 licence. Structures are segmented automatically; borders are approximate. Scroll with the mouse wheel, arrow keys or a vertical drag. Keys: L labels, Q quiz, 1–4 windows.</p>
+  </div>`;
+  const st={id,A,z:0,win:0,labels:'all',hover:0,sel:0,quiz:null,cats:new Set(A.defCats),D:null,dragging:false,score:[0,0]};
+  ANAT=st;
+  const $=s=>v.querySelector(s);
+  const cv=$('#an-cv'),ctx=cv.getContext('2d'),stage=$('#an-stage'),tip=$('#an-tip'),sc=$('#an-scout'),rng=$('#an-range');
+  const off=document.createElement('canvas'),octx=off.getContext('2d');
+  const hl=document.createElement('canvas'),hctx=hl.getContext('2d');
+  let geo={s:1,ox:0,oy:0};
+  const hex=c=>[parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)];
+
+  anatLoad(id,(l,f)=>{$('#an-ptxt').textContent=`${l}… ${Math.round(f*100)}%`;$('#an-pbar').style.width=Math.round(f*100)+'%'}).then(D=>{
+    if(ANAT!==st)return;
+    st.D=D;const s0=D.meta.structures.find(s=>s.name===A.start);st.z=s0?s0.best:Math.floor(D.Z/2);
+    off.width=hl.width=D.W;off.height=hl.height=D.H;
+    rng.max=D.Z-1;
+    $('#an-load').hidden=true;
+    buildCats();resize();drawScout();draw();
+  }).catch(e=>{$('#an-ptxt').textContent='The atlas could not be loaded. Reload the page to try again.';console.error(e)});
+
+  function buildCats(){
+    const D=st.D,used=new Set(D.meta.structures.map(s=>s.cat));
+    $('#an-cats').innerHTML=Object.entries(D.meta.cats).filter(([k])=>used.has(k)).map(([k,c])=>`<button type="button" data-cat="${k}" aria-pressed="${st.cats.has(k)}"><i style="background:${c.color}"></i>${c.name}</button>`).join('');
+  }
+  function resize(){
+    const D=st.D;if(!D)return;
+    const r=stage.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+    const w=r.width,h=Math.min(r.width*D.H/D.W,window.innerHeight*0.78);
+    stage.style.height=h+'px';
+    cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);cv.style.width=w+'px';cv.style.height=h+'px';
+    const s=Math.min(w/D.W,h/D.H);geo={s,ox:(w-D.W*s)/2,oy:(h-D.H*s)/2,dpr};
+    const sr=sc.parentNode.getBoundingClientRect();sc.width=D.W;sc.height=D.Z*(D.meta.spacing[0]/D.meta.spacing[2]);
+    sc.style.width='100%';
+    drawScout();
+  }
+  function drawScout(){
+    const D=st.D;if(!D)return;const g=sc.getContext('2d');
+    const tmp=document.createElement('canvas');tmp.width=D.W;tmp.height=D.Z;const tg=tmp.getContext('2d');const im=tg.createImageData(D.W,D.Z);
+    const [,W,L]=st.A.presets[0];const lo=L-W/2;
+    for(let i=0;i<D.W*D.Z;i++){const hu=D.lut[D.scout[i]];const g8=Math.max(0,Math.min(255,(hu-lo)/W*255));im.data[i*4]=im.data[i*4+1]=im.data[i*4+2]=g8;im.data[i*4+3]=255}
+    tg.putImageData(im,0,0);g.imageSmoothingEnabled=true;g.drawImage(tmp,0,0,sc.width,sc.height);
+    const y=(D.Z-1-st.z)/D.Z*sc.height;g.strokeStyle='#3cc6da';g.lineWidth=Math.max(1,sc.height/180);g.beginPath();g.moveTo(0,y);g.lineTo(sc.width,y);g.stroke();
+  }
+  function sliceStructs(){
+    const D=st.D,z=st.z,off0=z*D.H*D.W,acc={};
+    for(let y=0;y<D.H;y++)for(let x=0;x<D.W;x++){const l=D.lab[off0+y*D.W+x];if(!l)continue;const a=acc[l]||(acc[l]={n:0,sx:0,sy:0});a.n++;a.sx+=x;a.sy+=y}
+    const out=[];
+    for(const k in acc){const s=D.S[k];if(!s||acc[k].n<6)continue;const a=acc[k];let cx=a.sx/a.n,cy=a.sy/a.n;
+      // nearest point inside the mask to its centroid
+      let best=1e9,bx=cx,by=cy;const r=Math.ceil(Math.sqrt(a.n))+4;
+      for(let y=Math.max(0,Math.floor(cy-r));y<Math.min(D.H,cy+r);y++)for(let x=Math.max(0,Math.floor(cx-r));x<Math.min(D.W,cx+r);x++){if(D.lab[off0+y*D.W+x]==k){const d=(x-cx)**2+(y-cy)**2;if(d<best){best=d;bx=x;by=y}}}
+      out.push({s,n:a.n,x:bx+.5,y:by+.5})}
+    return out.sort((a,b)=>b.n-a.n);
+  }
+  function draw(){
+    const D=st.D;if(!D)return;
+    const z=st.z,[,W,L]=st.A.presets[st.win],lo=L-W/2,img=octx.createImageData(D.W,D.H),o=z*D.H*D.W;
+    const g=new Uint8ClampedArray(256);for(let i=0;i<256;i++)g[i]=(D.lut[i]-lo)/W*255;
+    for(let i=0;i<D.W*D.H;i++){const v=g[D.ct[o+i]];img.data[i*4]=img.data[i*4+1]=img.data[i*4+2]=v;img.data[i*4+3]=255}
+    octx.putImageData(img,0,0);
+    const {s,ox,oy,dpr}=geo;
+    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#000';ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(off,ox,oy,D.W*s,D.H*s);
+    // highlight
+    const q=st.quiz,focus=q?q.target.id:(st.hover||st.sel);
+    if(focus>0&&D.S[focus]){
+      const s0=D.S[focus],c=hex(D.meta.cats[s0.cat].color),hm=hctx.createImageData(D.W,D.H);let any=false;
+      for(let y=0;y<D.H;y++)for(let x=0;x<D.W;x++){const i=y*D.W+x;if(D.lab[o+i]!=focus)continue;any=true;
+        const edge=x==0||y==0||x==D.W-1||y==D.H-1||D.lab[o+i-1]!=focus||D.lab[o+i+1]!=focus||D.lab[o+i-D.W]!=focus||D.lab[o+i+D.W]!=focus;
+        hm.data[i*4]=c[0];hm.data[i*4+1]=c[1];hm.data[i*4+2]=c[2];hm.data[i*4+3]=edge?235:95}
+      if(any){hctx.putImageData(hm,0,0);ctx.drawImage(hl,ox,oy,D.W*s,D.H*s)}
+    }
+    // labels
+    const items=sliceStructs().filter(it=>st.cats.has(it.s.cat));
+    st.items=items;
+    if(!q&&st.labels==='all')drawLabels(items);
+    $('#an-pos').textContent=`Slice ${D.Z-z} of ${D.Z}`;
+    $('#an-lvl').textContent=D.level[z]?`Level ${D.level[z]}`:'';
+    rng.value=D.Z-1-z;
+    renderList(items);drawScout();
+  }
+  function drawLabels(items){
+    const {s,ox,oy}=geo,D=st.D,placed=[];
+    ctx.font='600 11.5px Manrope, system-ui, sans-serif';ctx.textBaseline='middle';
+    const W=cv.width/geo.dpr,H=cv.height/geo.dpr;
+    for(const it of items){
+      if(it.n<18)continue;
+      const px=ox+it.x*s,py=oy+it.y*s,tw=ctx.measureText(it.s.name).width+14,th=19;
+      const cands=[[14,-th/2],[-14-tw,-th/2],[-tw/2,-th-12],[-tw/2,12],[18,-th-6],[-18-tw,-th-6],[18,6],[-18-tw,6]];
+      let ok=null;
+      for(const [dx,dy] of cands){const r={x:px+dx,y:py+dy,w:tw,h:th};if(r.x<2||r.y<2||r.x+r.w>W-2||r.y+r.h>H-2)continue;
+        if(placed.every(p=>r.x>p.x+p.w+2||r.x+r.w<p.x-2||r.y>p.y+p.h+2||r.y+r.h<p.y-2)){ok=r;break}}
+      const col=D.meta.cats[it.s.cat].color;
+      ctx.beginPath();ctx.arc(px,py,3.2,0,7);ctx.fillStyle=col;ctx.fill();ctx.lineWidth=1.2;ctx.strokeStyle='#000';ctx.stroke();
+      if(!ok)continue;placed.push(ok);
+      const ax=ok.x>px?ok.x:ok.x+ok.w,ay=ok.y+ok.h/2;
+      ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(ax,ay);ctx.strokeStyle=col;ctx.lineWidth=1;ctx.stroke();
+      ctx.fillStyle='rgba(6,12,16,.78)';rr(ok.x,ok.y,ok.w,ok.h,5);ctx.fill();
+      ctx.fillStyle=it.s.id===st.sel?col:'#e8f1f4';ctx.fillText(it.s.name,ok.x+7,ok.y+ok.h/2+.5);
+    }
+  }
+  function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+  function renderList(items){
+    const D=st.D,box=$('#an-list');
+    if(st.quiz){box.innerHTML='<p class="an-empty">Labels are hidden during the quiz.</p>';$('#an-cnt').textContent='';return}
+    const by={};items.forEach(it=>(by[it.s.cat]=by[it.s.cat]||[]).push(it.s));
+    $('#an-cnt').textContent=items.length;
+    box.innerHTML=Object.keys(D.meta.cats).filter(k=>by[k]).map(k=>`<div class="an-grp"><div class="an-gh"><i style="background:${D.meta.cats[k].color}"></i>${D.meta.cats[k].name}</div>${by[k].sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true})).map(s=>`<button type="button" data-s="${s.id}" class="${s.id===st.sel?'on':''}">${s.name}</button>`).join('')}</div>`).join('')||'<p class="an-empty">No structures from the selected groups on this slice.</p>';
+  }
+  function setZ(z){const D=st.D;if(!D)return;z=Math.max(0,Math.min(D.Z-1,z));if(z!==st.z){st.z=z;draw()}}
+  function pick(ev){
+    const D=st.D;if(!D)return 0;const r=cv.getBoundingClientRect(),{s,ox,oy}=geo;
+    const x=Math.floor((ev.clientX-r.left-ox)/s),y=Math.floor((ev.clientY-r.top-oy)/s);
+    if(x<0||y<0||x>=D.W||y>=D.H)return 0;const l=D.lab[st.z*D.H*D.W+y*D.W+x];return l&&D.S[l]&&st.cats.has(D.S[l].cat)?l:0;
+  }
+  // ---- interaction
+  stage.addEventListener('wheel',ev=>{if(!st.D)return;ev.preventDefault();st.acc=(st.acc||0)+ev.deltaY;const step=Math.trunc(st.acc/40);if(step){st.acc-=step*40;setZ(st.z-step)}},{passive:false});
+  let dragY=null,dragZ=0,moved=false;
+  stage.addEventListener('pointerdown',ev=>{if(!st.D)return;dragY=ev.clientY;dragZ=st.z;moved=false;stage.setPointerCapture(ev.pointerId)});
+  stage.addEventListener('pointermove',ev=>{
+    if(!st.D)return;
+    if(dragY!==null&&(ev.buttons||ev.pointerType==='touch')){const dz=Math.round((dragY-ev.clientY)/4);if(Math.abs(dragY-ev.clientY)>4)moved=true;if(moved){setZ(dragZ+dz);tip.hidden=true;return}}
+    if(st.quiz)return;
+    const l=pick(ev);
+    if(l!==st.hover){st.hover=l;draw()}
+    if(l){const r=stage.getBoundingClientRect();tip.hidden=false;tip.textContent=st.D.S[l].name;tip.style.left=Math.min(ev.clientX-r.left+14,r.width-tip.offsetWidth-6)+'px';tip.style.top=(ev.clientY-r.top+14)+'px'}else tip.hidden=true;
+  });
+  stage.addEventListener('pointerup',ev=>{if(!st.D)return;const wasDrag=moved;dragY=null;moved=false;if(wasDrag)return;
+    if(st.quiz&&st.quiz.mode==='find'){quizClick(pick(ev));return}
+    const l=pick(ev);st.sel=l===st.sel?0:l;draw()});
+  stage.addEventListener('pointerleave',()=>{tip.hidden=true;if(st.hover){st.hover=0;draw()}});
+  const onKey=ev=>{
+    if(ANAT!==st||!st.D)return;if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
+    const k=ev.key;
+    if(k==='ArrowUp'||k==='ArrowLeft'){setZ(st.z+1);ev.preventDefault()}
+    else if(k==='ArrowDown'||k==='ArrowRight'){setZ(st.z-1);ev.preventDefault()}
+    else if(k==='PageUp'){setZ(st.z+10);ev.preventDefault()}else if(k==='PageDown'){setZ(st.z-10);ev.preventDefault()}
+    else if(k==='l'||k==='L')setLabels(st.labels==='all'?'hover':'all');
+    else if(k==='q'||k==='Q')toggleQuiz();
+    else if(/^[1-4]$/.test(k)&&st.A.presets[+k-1])setWin(+k-1);
+  };
+  document.addEventListener('keydown',onKey);
+  const onResize=()=>{if(ANAT===st){resize();draw()}};window.addEventListener('resize',onResize);
+  st.destroy=()=>{document.removeEventListener('keydown',onKey);window.removeEventListener('resize',onResize)};
+  rng.addEventListener('input',()=>setZ(st.D.Z-1-(+rng.value)));
+  let scDrag=false;const scMove=ev=>{const r=sc.getBoundingClientRect();setZ(st.D.Z-1-Math.floor((ev.clientY-r.top)/r.height*st.D.Z))};
+  sc.addEventListener('pointerdown',ev=>{if(!st.D)return;scDrag=true;sc.setPointerCapture(ev.pointerId);scMove(ev)});
+  sc.addEventListener('pointermove',ev=>{if(scDrag)scMove(ev)});sc.addEventListener('pointerup',()=>scDrag=false);
+  function setWin(i){st.win=i;v.querySelectorAll('[data-win]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.win===i));draw()}
+  function setLabels(m){st.labels=m;v.querySelectorAll('[data-lab]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lab===m));draw()}
+  v.querySelector('.anat-bar').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;
+    if(b.dataset.win)setWin(+b.dataset.win);else if(b.dataset.lab)setLabels(b.dataset.lab);else if(b.id==='an-quiz')toggleQuiz()});
+  $('#an-cats').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;const k=b.dataset.cat;st.cats.has(k)?st.cats.delete(k):st.cats.add(k);b.setAttribute('aria-pressed',st.cats.has(k));if(st.sel&&!st.cats.has(st.D.S[st.sel].cat))st.sel=0;draw()});
+  const list=$('#an-list');
+  list.addEventListener('mouseover',ev=>{const b=ev.target.closest('[data-s]');const l=b?+b.dataset.s:0;if(l!==st.hover){st.hover=l;draw()}});
+  list.addEventListener('mouseleave',()=>{if(st.hover){st.hover=0;draw()}});
+  list.addEventListener('click',ev=>{const b=ev.target.closest('[data-s]');if(!b)return;const l=+b.dataset.s;st.sel=st.sel===l?0:l;draw()});
+  // search
+  const qi=$('#an-q'),qr=$('#an-res');
+  qi.addEventListener('input',()=>{const D=st.D;if(!D)return;const t=qi.value.trim().toLowerCase();if(!t){qr.hidden=true;return}
+    const hits=D.meta.structures.filter(s=>s.name.toLowerCase().includes(t)).slice(0,8);
+    qr.hidden=false;qr.innerHTML=hits.length?hits.map(s=>`<button type="button" data-go="${s.id}"><i style="background:${D.meta.cats[s.cat].color}"></i>${s.name}</button>`).join(''):'<div class="an-empty">No match in this scan.</div>'});
+  qr.addEventListener('click',ev=>{const b=ev.target.closest('[data-go]');if(!b)return;const s=st.D.S[+b.dataset.go];st.cats.add(s.cat);buildCats();st.sel=s.id;st.z=s.best;qi.value='';qr.hidden=true;draw();stage.focus()});
+  qi.addEventListener('keydown',ev=>{if(ev.key==='Enter'){const b=qr.querySelector('[data-go]');if(b)b.click()}else if(ev.key==='Escape'){qi.value='';qr.hidden=true}});
+  // ---- quiz
+  function toggleQuiz(){
+    const b=$('#an-quiz');
+    if(st.quiz){st.quiz=null;b.setAttribute('aria-pressed','false');b.textContent='Quiz me';$('#an-qz').hidden=true;draw();return}
+    b.setAttribute('aria-pressed','true');b.textContent='End quiz';st.score=[0,0];st.sel=0;st.hover=0;tip.hidden=true;nextQ(false);
+  }
+  function nextQ(move){
+    const D=st.D;
+    const pool=()=>sliceStructs().filter(it=>st.cats.has(it.s.cat)&&it.n>=60);
+    if(move){for(let t=0;t<40;t++){const z=Math.floor(D.Z*0.06+Math.random()*D.Z*0.88);st.z=z;if(pool().length>=4)break}}
+    let p=pool();if(p.length<2){st.quiz=null;$('#an-qz').hidden=false;$('#an-qz').innerHTML='<p>Not enough labelled structures here. Scroll to another slice and press Quiz me again.</p>';$('#an-quiz').setAttribute('aria-pressed','false');$('#an-quiz').textContent='Quiz me';draw();return}
+    const target=p[Math.floor(Math.random()*p.length)].s;
+    const mode=Math.random()<0.5?'name':'find';
+    const others=D.meta.structures.filter(s=>s.id!==target.id&&s.name!==target.name);
+    const same=others.filter(s=>s.cat===target.cat),rest=others.filter(s=>s.cat!==target.cat);
+    const shuffle=a=>a.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+    const opts=shuffle([target,...shuffle(same).slice(0,3),...shuffle(rest)].slice(0,4));
+    st.quiz={target:mode==='find'?{id:-1,real:target}:target,mode,opts,done:false};renderQuiz();draw();
+  }
+  function renderQuiz(msg){
+    const q=st.quiz,box=$('#an-qz');box.hidden=false;
+    const real=q.target.real||q.target;
+    const sc=`<span class="an-score">${st.score[0]} / ${st.score[1]}</span>`;
+    if(q.mode==='name'){
+      box.innerHTML=`<div class="an-qh"><b>Name the highlighted structure</b>${sc}</div><div class="an-opts">${q.opts.map(s=>`<button type="button" data-a="${s.id}" ${q.done?'disabled':''} class="${q.done&&s.id===real.id?'ok':''}${q.done&&q.pick===s.id&&s.id!==real.id?' bad':''}">${s.name}</button>`).join('')}</div>${q.done?`<div class="an-qf">${msg}<button type="button" class="btn pri" data-next>Next</button></div>`:''}`;
+    }else{
+      box.innerHTML=`<div class="an-qh"><b>Click the ${lcName(real.name)}</b>${sc}</div>${q.done?`<div class="an-qf">${msg}<button type="button" class="btn pri" data-next>Next</button></div>`:'<p class="an-qhint">Click on the image.</p>'}`;
+    }
+  }
+  $('#an-qz').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b||!st.quiz)return;
+    if(b.dataset.next!==undefined){nextQ(true);return}
+    const q=st.quiz;if(q.done)return;q.pick=+b.dataset.a;q.done=true;st.score[1]++;
+    const right=q.pick===q.target.id;if(right)st.score[0]++;
+    renderQuiz(right?'<span class="ok">Correct.</span>':`<span class="bad">It is the ${lcName(q.target.name)}.</span>`)});
+  function quizClick(l){const q=st.quiz;if(q.done)return;q.done=true;st.score[1]++;const real=q.target.real;const right=l===real.id;if(right)st.score[0]++;
+    q.target=real;draw();renderQuiz(right?'<span class="ok">Correct.</span>':`<span class="bad">${l?`That is the ${lcName(st.D.S[l].name)}. `:''}The ${lcName(real.name)} is highlighted.</span>`)}
+}
+
 /* ---------- routing ---------- */
 let lastHash=null;
 function render(h){
-  NAV={entry:null,caseSec:null};
-  if(byId[h]){NAV.entry=h;entry(byId[h])}
+  NAV={entry:null,caseSec:null,anat:null};
+  if(ANAT){ANAT.destroy&&ANAT.destroy();ANAT=null}
+  if(h==='anatomy'){NAV.anat='home';anatomyHome()}
+  else if(h.startsWith('anatomy-')&&ATLAS_BY[h.slice(8)]){NAV.anat=h.slice(8);anatomyView(h.slice(8))}
+  else if(byId[h]){NAV.entry=h;entry(byId[h])}
   else if(h==='cases'){NAV.caseSec='all';casesHome()}
   else if(h.startsWith('cases-')&&CASE_SEC[h.slice(6)]){NAV.caseSec=h.slice(6);caseList(h.slice(6))}
   else if(h.startsWith('case-new-')&&CASE_SEC[h.slice(9)]){NAV.caseSec=h.slice(9);caseForm(null,h.slice(9))}
