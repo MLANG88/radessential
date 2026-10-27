@@ -238,6 +238,42 @@ ${T(['Type','Central fragment','MCT'],[
 <h3>Report</h3>${P(['Central fragment size, comminution and displacement on axial and coronal images.','Lacrimal fossa and nasolacrimal duct involvement.','Frontal sinus outflow tract and posterior table; cribriform plate and fovea ethmoidalis (CSF leak risk).','Clinically, telecanthus (widened intercanthal distance) suggests MCT displacement.'])}`,
 refs:[{c:'Markowitz BL, Manson PN, Sargent L, et al. Management of the medial canthal tendon in nasoethmoid orbital fractures: the importance of the central fragment in classification and treatment. Plast Reconstr Surg. 1991;87:843–853.',q:'Markowitz Manson management medial canthal tendon nasoethmoid orbital fractures central fragment'}],rp:'naso-orbito-ethmoid fracture'});
 
+add({id:'shunt-valves',sec:'hn',title:'Programmable shunt valve settings',alias:'vp shunt ventriculoperitoneal ventriculostomy programmable valve setting skull radiograph shunt series codman hakim certas plus medtronic strata polaris sophysa sophy sm8 aesculap miethke progav mri shunt check',ver:'Costello & Rassner 2020',tags:['XR','CT','MRI safety'],
+lede:'Read the valve on a radiograph taken perpendicular to the valve face. Identify the manufacturer and model first, check laterality with the orientation marker, then read the setting. Report the model and the setting, not only a pressure.',
+body:`<h3>Reading checklist</h3>${P(['Get a dedicated view perpendicular to the valve, not to the skull. Obliquity moves the dial and hides the orientation marker; repeat a centered view rather than guess.','Identify the valve by its dial shape and model markers before reading the setting.','Confirm laterality with the orientation marker. A flipped image reverses the reading on Hakim, Strata and proGAV valves.','Report valve model, setting (position, level or pressure) and comparison with the prior study.','Pitfalls: an antisiphon device can mimic a programmable dial; the Aesculap Dual Switch is a fixed valve whose central component can mimic one.'])}
+<h3>Valves at a glance</h3>
+${T(['Valve','Radiographic appearance','How to read the setting','Settings'],[
+ ['Codman Hakim','Round radiopaque cam (dial) with a radiolucent notch; small round marker on one side for laterality','Put the laterality dot on the patient&#39;s right (flip the image if it is on the left), then read the notch position against the setting chart','30–200 mmH₂O in 10 mmH₂O steps (18 settings)'],
+ ['Codman Certas / Certas Plus','Two parallel radiopaque bars form the dial; a small round marker on one bar; second marker at the cephalad end for laterality','Read which of 8 positions the dial marker points to','Positions 1–8, see table below; 8 = virtual off'],
+ ['Medtronic Strata II / Strata NSC','Dial with a round centre and squared sides; model-specific marker at the cephalad end; round laterality markers','Notch on one side of the dial points to the level. The hand-held indicator can read 180° off the radiograph; the radiograph wins','Performance levels 0.5, 1.0, 1.5, 2.0, 2.5 (about 15–170 mmH₂O overall; flow-dependent)'],
+ ['Sophysa Polaris (SPV)','Two parallel radiopaque squares (rotor); five studs along the side; 0–3 dots beside the inlet give the model','Position 1 is the stud nearest the inlet connector (wider, with nut); positions rise clockwise to 5','5 positions; pressures depend on model, see table below'],
+ ['Sophysa Sophy Mini SM8','Radiopaque rotor squares; 0–3 markers at the cephalad end give the model','Read rotor position against the markers on the left side of the valve','8 positions; same model ranges as Polaris'],
+ ['Aesculap/Miethke proGAV','Round dial with a pointed squared edge on each side; flat radiolucent edge marks laterality','The pointed side of the dial indicates the setting; use the manufacturer X-ray template','0–20 cmH₂O (adjustable unit) plus a fixed gravitational unit'],
+ ['Aesculap/Miethke proGAV 2.0','Six radiopaque dots in a triangle; small saucer-shaped lucency for laterality','Join the magnets and drill holes into a triangle; its apex (rotor tip) points to the setting. Template indicator at 3 o&#39;clock; flip if reversed','0–20 cmH₂O'],
+ ['Aesculap/Miethke proSA','Dial similar to proGAV; scalloped lucent inner margin for laterality','Pointed edge indicates setting','0–40 cmH₂O in 10 cmH₂O steps']])}
+<h3>Codman Certas Plus positions</h3>
+${T(['Position','1','2','3','4','5','6','7','8'],[['mmH₂O','25','50','80','110','145','180','215','Virtual off (&gt;400)']])}
+<h3>Sophysa Polaris positions (mmH₂O)</h3>
+${T(['Model (dots by inlet)','Pos 1','Pos 2','Pos 3','Pos 4','Pos 5'],[
+ ['SPV-140 (no dot)','10','40','80','110','140'],
+ ['SPV (1 dot)','30','70','110','150','200'],
+ ['SPV-300 (2 dots)','50','100','150','220','300'],
+ ['SPV-400 (3 dots)','80','150','230','330','400']])}
+<h3>MRI and the setting</h3>
+${T(['Valve','MRI status','After MRI'],[
+ ['Codman Hakim','MR conditional to 3T; the magnetic field can reset the valve',B('Radiograph or check required','crit')],
+ ['Codman Certas Plus','MR conditional to 3T; designed to resist changes',B('Confirm setting','warn')],
+ ['Medtronic Strata II / NSC','MR conditional to 3T; MRI may change the setting',B('Check before and after','crit')],
+ ['Sophysa Polaris','MR conditional to 3T; magnetic lock, but rotation in the field can change it',B('Check before and after','warn')],
+ ['Sophysa Sophy SM8','MR conditional at 1.5T only; no magnetic lock',B('Radiograph or check required','crit')],
+ ['Aesculap proGAV / proGAV 2.0 / proSA','MR conditional to 3T; change not expected, but cannot be excluded if the valve is pressed in the field; no local transmit coil over the valve',B('Check if any doubt','warn')]])}
+${N('Always follow the current manufacturer instructions for the specific model and serial number. The Medtronic Strata MR (Class I recall for underdrainage) is no longer implanted. Pressures for Strata levels and proGAV graduations depend on flow and model; use the manufacturer chart when a pressure value matters.')}`,
+refs:[{c:'Costello JE, Rassner UA. An update on programmable CSF shunt valves: identification, MR imaging safety and potential pitfalls. Neurographics. 2020;10:26–32.',q:'Costello Rassner update programmable CSF shunt valves identification MR imaging safety pitfalls'},
+ {c:'Lollis SS, Mamourian AC, Vaccaro TJ, Duhaime AC. Programmable CSF shunt valves: radiographic identification and interpretation. AJNR Am J Neuroradiol. 2010;31:1343–1346.',q:'Lollis Mamourian programmable CSF shunt valves radiographic identification interpretation'},
+ {c:'Sophysa. Polaris® adjustable pressure valve: instructions for use. Sophysa USA; 2023.',q:''},
+ {c:'Integra LifeSciences. CERTAS™ Plus programmable valve: product information.',q:''},
+ {c:'Medtronic. Strata™ family of adjustable valves: product brochure and MR conditional labelling.',q:''}],rp:'programmable shunt valve'});
+
 add({id:'zmc',sec:'hn',title:'Zygomaticomaxillary complex fracture',alias:'zmc tripod tetrapod fracture zygoma malar',ver:'Review',tags:['CT','Trauma'],
 lede:'"Tetrapod" fracture separating the zygoma from its four articulations. Older term "tripod" omits the arch or the posterior maxillary wall depending on author.',
 body:`${ILLUS(['fig-zmc','ZMC fracture components: lateral orbital rim, zygomatic arch, inferior orbital rim/floor, maxillary sinus walls'])}${T(['Component','Where to look'],[
