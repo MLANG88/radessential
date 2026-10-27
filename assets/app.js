@@ -751,9 +751,9 @@ function renderNav(){
   const chev=`<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3l5 5-5 5"/></svg>`;
   const grp=(id,name,list,isCur)=>`<details class="grp" data-sec="${id}"${openSecs.includes(id)?' open':''}><summary><span>${name}</span><span class="cnt">${list.length}</span>${chev}</summary><div class="items">${list.map(e=>`<a href="#${e.id}" class="${isCur(e)?'cur':''}">${e.title}</a>`).join('')}</div></details>`;
   let h=`<a class="home${!cur&&!NAV.caseSec&&!NAV.anat?' cur':''}" href="#">Index</a><div class="navtools"><button type="button" id="expAll">Expand all</button><button type="button" id="colAll">Collapse all</button></div>`;
+  h+=`<details class="grp atlas-grp" data-sec="anatomy"${openSecs.includes('anatomy')?' open':''}><summary><span>Atlas</span><span class="cnt">${ATLAS.length}</span>${chev}</summary><div class="items">${ATLAS.map(a=>`<a href="#anatomy-${a.id}" class="${NAV.anat===a.id?'cur':''}">${a.title}</a>`).join('')}</div></details>`;
   if(pins.length)h+=grp('pinned','Pinned',pins.filter(id=>byId[id]).map(id=>byId[id]),e=>e.id===cur);
   SECTIONS.forEach(s=>{const list=s.id==='calc'?[...inSec('calc'),...CALC_LINKS.map(i=>byId[i])]:inSec(s.id);h+=grp(s.id,s.name,list,e=>e.id===cur&&s.id===e.sec)});
-  h+=`<details class="grp cases-grp" data-sec="anatomy"${openSecs.includes('anatomy')?' open':''}><summary><span>Anatomy</span><span class="cnt">${ATLAS.length}</span>${chev}</summary><div class="items">${ATLAS.map(a=>`<a href="#anatomy-${a.id}" class="${NAV.anat===a.id?'cur':''}">${a.title}</a>`).join('')}</div></details>`;
   const n=casesState==='ready'?CASES.length:'';
   h+=`<details class="grp cases-grp" data-sec="cases"${openSecs.includes('cases')?' open':''}><summary><span>Cases</span><span class="cnt">${n}</span>${chev}</summary><div class="items">
     <a href="#cases" class="${NAV.caseSec==='all'?'cur':''}">All cases</a>
@@ -791,7 +791,7 @@ function home(){
   <div class="sechead"><h2>Reference</h2></div>
   <div class="secs">${SECTIONS.filter(s=>s.id!=='calc').map(s=>`<section class="sec">${COVER(s.name,inSec(s.id).length,SEC_IMG[s.id])}<ul>${inSec(s.id).map(e=>`<li><a href="#${e.id}">${e.title}<small>${e.ver}</small></a></li>`).join('')}</ul></section>`).join('')}
   <section class="sec">${COVER('Calculators',E.filter(e=>e.init).length,null)}<ul>${E.filter(e=>e.init).map(e=>`<li><a href="#${e.id}">${e.title}<small>${secName(e.sec)}</small></a></li>`).join('')}</ul></section></div>
-  <div class="sechead"><h2>Anatomy</h2><a href="#anatomy">All atlases →</a></div>
+  <div class="sechead"><h2>Atlas</h2><a href="#anatomy">All atlases →</a></div>
   <div class="anat-cards">${ATLAS.map(a=>`<a class="csec" href="#anatomy-${a.id}">${COVER(a.title,'',a.img)}<span class="anat-sub">${a.sub}</span></a>`).join('')}</div>
   <div class="sechead"><h2>Cases</h2><a href="#cases">All cases →</a></div>
   <div class="csecs">${CASE_SECS.map(s=>`<a class="csec" href="#cases-${s.id}">${COVER(s.name,casesState==='ready'?casesIn(s.id).length:'',CASE_IMG[s.id])}</a>`).join('')}</div>
@@ -1041,7 +1041,7 @@ async function anatLoad(id,onProgress){
 
 function anatomyHome(){
   V().innerHTML=`<div class="wrap wide">
-  <header class="ebanner"${IMGV('brain')}><div class="crumb"><a href="#">Index</a> / Anatomy</div><div class="ehead"><h1>Cross-sectional anatomy</h1></div></header>
+  <header class="ebanner"${IMGV('brain')}><div class="crumb"><a href="#">Index</a> / Atlas</div><div class="ehead"><h1>Atlas</h1></div></header>
   <p class="lede">Scroll through a full CT and hover over anything to name it. Every structure is outlined on every slice, with a quiz mode to test yourself.</p>
   <div class="anat-cards">${ATLAS.map(a=>`<a class="csec" href="#anatomy-${a.id}">${COVER(a.title,'',a.img)}<span class="anat-sub">${a.sub}</span></a>`).join('')}</div></div>`;
 }
@@ -1049,7 +1049,7 @@ function anatomyHome(){
 function anatomyView(id){
   const A=ATLAS_BY[id];const v=V();
   v.innerHTML=`<div class="wrap wide anat">
-  <header class="ebanner"${IMGV(A.img)}><div class="crumb"><a href="#">Index</a> / <a href="#anatomy">Anatomy</a></div>
+  <header class="ebanner"${IMGV(A.img)}><div class="crumb"><a href="#">Index</a> / <a href="#anatomy">Atlas</a></div>
   <div class="ehead"><h1>${A.title}</h1></div><div class="meta"><span class="tag v">Interactive atlas</span><span class="tag">${A.sub}</span></div></header>
   <div class="anat-bar">
     <div class="seg" role="group" aria-label="Window">${A.presets.map((p,i)=>`<button type="button" data-win="${i}" aria-pressed="${i===0}">${p[0]}</button>`).join('')}</div>

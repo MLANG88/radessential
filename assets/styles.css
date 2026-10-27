@@ -368,6 +368,7 @@ a.btn.pri{color:var(--bg)}
 .grp .items{border-left:2px solid var(--line);margin-left:16px;padding-left:6px}
 .navtools button{border-radius:999px}
 .cases-grp{border-top:1px solid var(--line);margin-top:10px;padding-top:6px}
+.atlas-grp{border-bottom:1px solid var(--line);margin-bottom:8px;padding-bottom:6px}
 main{padding-block:24px 72px}
 .wrap.wide{max-width:1140px}
 
