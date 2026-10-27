@@ -109,14 +109,14 @@ const TREES={
 
 /* ---------- sections ---------- */
 const SECTIONS=[
- {id:'neuro',name:'Neuro'},
- {id:'hn',name:'Head & Neck'},
- {id:'chest',name:'Chest & Vascular'},
  {id:'body',name:'Abdomen & Pelvis'},
+ {id:'breast',name:'Breast'},
+ {id:'calc',name:'Calculators'},
+ {id:'chest',name:'Chest & Vascular'},
+ {id:'hn',name:'Head & Neck'},
  {id:'incid',name:'Incidental findings'},
  {id:'msk',name:'MSK & Spine'},
- {id:'breast',name:'Breast'},
- {id:'calc',name:'Calculators'}
+ {id:'neuro',name:'Neuro'}
 ];
 
 /* ---------- entries ---------- */
@@ -750,9 +750,9 @@ const inSec=sid=>E.filter(e=>e.sec===sid);
 
 /* ---------- cases: data layer ---------- */
 const CASE_SECS=[
- {id:'neuro',name:'Neuro'},{id:'hn',name:'Head & Neck'},{id:'chest',name:'Chest'},{id:'cardiac',name:'Cardiac'},
- {id:'vascular',name:'Vascular'},{id:'body',name:'Abdomen & Pelvis'},{id:'msk',name:'MSK'},{id:'breast',name:'Breast'},
- {id:'peds',name:'Pediatrics'},{id:'nm',name:'Nuclear Medicine'}];
+ {id:'body',name:'Abdomen & Pelvis'},{id:'breast',name:'Breast'},{id:'cardiac',name:'Cardiac'},{id:'chest',name:'Chest'},
+ {id:'hn',name:'Head & Neck'},{id:'msk',name:'MSK'},{id:'neuro',name:'Neuro'},{id:'nm',name:'Nuclear Medicine'},
+ {id:'peds',name:'Pediatrics'},{id:'vascular',name:'Vascular'}];
 const CASE_SEC=Object.fromEntries(CASE_SECS.map(s=>[s.id,s]));
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const paras=s=>String(s||'').trim().split(/\n\s*\n/).filter(Boolean).map(p=>`<p>${esc(p).replace(/\n/g,'<br>')}</p>`).join('');
