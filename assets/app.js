@@ -1043,10 +1043,21 @@ document.addEventListener('keydown',ev=>{if(lb.hidden)return;if(ev.key==='Escape
 
 /* ---------- anatomy viewer ---------- */
 const ATLAS=[
- {id:'ct-chest',title:'CT chest',sub:'Contrast-enhanced CT angiogram, neck base to upper abdomen · 1.5 mm',img:'thoracic',
-  presets:[['Angio',700,200],['Mediastinum',350,40],['Lung',1500,-600],['Bone',1800,400]],defCats:['art','vein','heart','lung','gi','solid','endo','cns'],start:'Heart'},
- {id:'ct-abdomen',title:'CT abdomen and pelvis',sub:'Non-contrast CT, lung bases to proximal femurs · 3 mm slices',img:'abdomen',
-  presets:[['Soft tissue',400,50],['Narrow',250,40],['Bone',1800,400],['Lung',1500,-600]],defCats:['art','vein','gi','solid','gu','endo','muscle','cns'],start:'Pancreas'}
+ {id:'ct-chest',title:'CT chest',sub:'Contrast-enhanced CT, thoracic inlet to upper abdomen · 1.5 mm',img:'thoracic',
+  presets:[['Mediastinum',350,40],['Lung',1500,-600],['Soft tissue',400,50],['Bone',1800,400]],defCats:['art','vein','heart','lung','gi','solid','endo','cns'],start:'Aortic arch',
+  credit:'CT and expert-reviewed structure masks: TotalSegmentator dataset v2.0.1 (Wasserthal J, et al. Radiol Artif Intell 2023;5:e230024), CC BY 4.0. Display resampled to 0.75 mm in-plane.'},
+ {id:'ct-abdomen',title:'CT abdomen and pelvis',sub:'Portal venous CT, liver dome to proximal femurs · 1.5 mm',img:'abdomen',
+  presets:[['Soft tissue',400,50],['Narrow',250,40],['Bone',1800,400],['Lung',1500,-600]],defCats:['art','vein','gi','solid','gu','endo','muscle','cns'],start:'Pancreas',
+  credit:'CT and expert-reviewed structure masks: TotalSegmentator dataset v2.0.1 (Wasserthal J, et al. Radiol Artif Intell 2023;5:e230024), CC BY 4.0. Display resampled to 0.75 mm in-plane.'},
+ {id:'ct-neck',title:'CT head and neck',sub:'Contrast-enhanced CT, skull base to aortic arch · 1.5 mm',img:'neck',
+  presets:[['Soft tissue',350,50],['Narrow',250,60],['Bone',2800,600],['Brain',80,40]],defCats:['art','vein','aero','endo','gi','muscle','orbit','sinus','cns'],start:'Left parotid gland',
+  credit:'CT and expert-reviewed masks for the spine, thyroid, airway, oesophagus and great vessels: TotalSegmentator dataset v2.0.1 (Wasserthal J, et al. Radiol Artif Intell 2023;5:e230024), CC BY 4.0. Glands, pharynx, mandible, sinuses, muscles, cartilages, internal carotid arteries and jugular veins: TotalSegmentator head and neck models (Apache-2.0), automatic segmentation, borders approximate. Display resampled to 0.75 mm in-plane.'},
+ {id:'mri-brain',title:'MRI brain',sub:'T1-weighted MNI ICBM152 template · 1 mm · 97 regions',img:'atlas-brain',
+  presets:[['T1',235,120],['Grey–white',150,150],['Full range',255,128]],defCats:['frontal','parietal','temporal','occipital','limbic','insula','deep','csf','cereb','stem'],start:'Left hippocampus',
+  credit:'MRI: MNI ICBM152 2009c nonlinear symmetric template (Fonov V, et al. NeuroImage 2011;54:313–327), Copyright (C) 1993–2004 Louis Collins, McConnell Brain Imaging Centre, Montreal Neurological Institute, McGill University. Labels: CerebrA atlas (Manera AL, et al. Sci Data 2020;7:237), CC0; cortical regions follow the Desikan–Killiany–Tourville protocol. White matter from the template tissue map. Display resampled to 0.5 mm.'},
+ {id:'mri-spine',title:'MRI lumbar spine',sub:'Sagittal T2-weighted, 3 T · 3.3 mm sections',img:'atlas-spine',
+  presets:[['T2',255,128],['Bright',190,100],['Contrast',170,150]],defCats:['bone','disc','cns'],start:'L3 vertebra',
+  credit:'MRI and expert segmentations: SPIDER dataset (van der Graaf JW, et al. Sci Data 2024;11:264), CC BY 4.0. SPIDER numbers vertebrae upward from the lowest lumbar level; levels here assume five lumbar vertebrae.'}
 ];
 const lcName=n=>/^[A-Z]\d/.test(n)?n:n.charAt(0).toLowerCase()+n.slice(1);
 const ATLAS_BY=Object.fromEntries(ATLAS.map(a=>[a.id,a]));
@@ -1056,42 +1067,58 @@ async function anatLoad(id,onProgress){
   if(ANAT_CACHE[id])return ANAT_CACHE[id];
   const base='anatomy/'+id+'/';
   const meta=await (await fetch(base+'meta.json')).json();
-  const [Z,H,W]=meta.shape,cols=meta.cols;
-  const get=async(f,label)=>{
+  const [Z,H,W]=meta.shape;
+  const chunks=meta.chunks||[{ct:'ct.png',lab:'labels.png',z0:0,n:Z,cols:meta.cols}];
+  const totalFiles=chunks.length*2;let doneFiles=0;
+  const ct=new Uint8Array(Z*H*W),lab=new Uint8Array(Z*H*W);
+  const get=async(f,c,out)=>{
     const r=await fetch(base+f);if(!r.ok)throw new Error(f+' '+r.status);
-    const total=+r.headers.get('content-length')||0;let got=0;
-    const rd=r.body.getReader(),parts=[];
-    for(;;){const {done,value}=await rd.read();if(done)break;parts.push(value);got+=value.length;if(total)onProgress(label,Math.min(1,got/total))}
-    const bmp=await createImageBitmap(new Blob(parts,{type:'image/png'}),{colorSpaceConversion:'none',premultiplyAlpha:'none'});
-    const c=document.createElement('canvas');c.width=bmp.width;c.height=bmp.height;const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(bmp,0,0);
-    const px=g.getImageData(0,0,c.width,c.height).data,out=new Uint8Array(Z*H*W);
-    for(let z=0;z<Z;z++){const r0=Math.floor(z/cols)*H,c0=(z%cols)*W;for(let y=0;y<H;y++){let si=((r0+y)*c.width+c0)*4,di=(z*H+y)*W;for(let x=0;x<W;x++,si+=4)out[di+x]=px[si]}}
-    return out;
+    const blob=await r.blob();
+    const bmp=await createImageBitmap(blob,{colorSpaceConversion:'none',premultiplyAlpha:'none'});
+    const cv=document.createElement('canvas');cv.width=bmp.width;cv.height=bmp.height;const g=cv.getContext('2d',{willReadFrequently:true});g.drawImage(bmp,0,0);
+    const px=g.getImageData(0,0,cv.width,cv.height).data;
+    for(let i=0;i<c.n;i++){const z=c.z0+i,r0=Math.floor(i/c.cols)*H,c0=(i%c.cols)*W;for(let y=0;y<H;y++){let si=((r0+y)*cv.width+c0)*4,di=(z*H+y)*W;for(let x=0;x<W;x++,si+=4)out[di+x]=px[si]}}
+    doneFiles++;onProgress('Loading scan',doneFiles/totalFiles);
   };
-  const ct=await get('ct.png','Loading CT');
-  const lab=await get('labels.png','Loading labels');
+  // load chunks a few at a time
+  const jobs=[];chunks.forEach(c=>{jobs.push(()=>get(c.ct,c,ct));jobs.push(()=>get(c.lab,c,lab))});
+  let next=0;const worker=async()=>{while(next<jobs.length){const j=jobs[next++];await j()}};
+  await Promise.all([worker(),worker(),worker(),worker()]);
 
   const S={};meta.structures.forEach(s=>S[s.id]=s);
-  // per-label per-slice area, best slice
   const area=new Uint32Array(256*Z);
   for(let z=0;z<Z;z++){const off=z*H*W;for(let i=0;i<H*W;i++){const l=lab[off+i];if(l)area[l*Z+z]++}}
   meta.structures.forEach(s=>{let b=0,bz=0;for(let z=0;z<Z;z++){const a=area[s.id*Z+z];if(a>b){b=a;bz=z}}s.best=bz;s.maxArea=b});
-  // vertebral level per slice
   const verts=meta.structures.filter(s=>/^(C|T|L|S)\d+ vertebra$/.test(s.name));
   const level=new Array(Z).fill('');
-  for(let z=0;z<Z;z++){let b=0;verts.forEach(v=>{const a=area[v.id*Z+z];if(a>b){b=a;level[z]=v.name.split(' ')[0]}})}
-  // coronal scout through the body centre
-  const midY=Math.round(H*0.52);
+  if(meta.scroll!=='sagittal')for(let z=0;z<Z;z++){let b=0;verts.forEach(v=>{const a=area[v.id*Z+z];if(a>b){b=a;level[z]=v.name.split(' ')[0]}})}
+  const midY=Math.round(H*(meta.scoutRow||0.52)),mr=meta.modality!=='CT',half=mr?2:3;
   const scout=new Uint8Array(Z*W);
-  for(let z=0;z<Z;z++)for(let x=0;x<W;x++){let m=0;for(let y=midY-3;y<=midY+3;y++){const v=ct[z*H*W+y*W+x];if(v>m)m=v}scout[(Z-1-z)*W+x]=m}
+  for(let z=0;z<Z;z++)for(let x=0;x<W;x++){let m=0,sum=0,n=0;for(let y=midY-half;y<=midY+half;y++){const v=ct[z*H*W+y*W+x];if(v>m)m=v;sum+=v;n++}scout[(Z-1-z)*W+x]=mr?Math.round(sum/n):m}
   const lut=new Float32Array(meta.lut);
-  return ANAT_CACHE[id]={meta,ct,lab,S,area,level,scout,lut,Z,H,W};
+  const mm2=(meta.spacing[1]||1.5)*(meta.spacing[2]||1.5);
+  return ANAT_CACHE[id]={meta,ct,lab,S,area,level,scout,lut,Z,H,W,mm2};
+}
+// crisp outline of one label on one slice (marching squares through pixel centres)
+const anatRank=n=>{const m=/^(C|T|L|S)(\d+)/.exec(n);return m?'CTLS'.indexOf(m[1])*100+(+m[2]):null};
+const anatCmp=(a,b)=>{const x=anatRank(a.name),y=anatRank(b.name);return x!==null&&y!==null?x-y:a.name.localeCompare(b.name,undefined,{numeric:true})};
+function anatContour(lab,off,W,H,k){
+  const segs=[];const at=(x,y)=>x>=0&&y>=0&&x<W&&y<H&&lab[off+y*W+x]===k?1:0;
+  for(let y=-1;y<H;y++)for(let x=-1;x<W;x++){
+    const a=at(x,y),b=at(x+1,y),c=at(x+1,y+1),d=at(x,y+1),code=a|b<<1|c<<2|d<<3;
+    if(code===0||code===15)continue;
+    const T=[x+1,y+.5],R=[x+1.5,y+1],B=[x+1,y+1.5],L=[x+.5,y+1];
+    switch(code){case 1:case 14:segs.push(L,T);break;case 2:case 13:segs.push(T,R);break;case 3:case 12:segs.push(L,R);break;
+      case 4:case 11:segs.push(R,B);break;case 6:case 9:segs.push(T,B);break;case 7:case 8:segs.push(L,B);break;
+      case 5:segs.push(L,T,R,B);break;case 10:segs.push(T,R,B,L);break}
+  }
+  return segs;
 }
 
 function anatomyHome(){
   V().innerHTML=`<div class="wrap wide">
   <header class="ebanner"${IMGV('brain')}><div class="crumb"><a href="#">Index</a> / Atlas</div><div class="ehead"><h1>Atlas</h1></div></header>
-  <p class="lede">Scroll through a full CT and hover over anything to name it. Every structure is outlined on every slice, with a quiz mode to test yourself.</p>
+  <p class="lede">Scroll through CT and MRI and hover over anything to name it. Every structure is outlined on every slice, with a quiz mode to test yourself.</p>
   <div class="anat-cards">${ATLAS.map(a=>`<a class="csec" href="#anatomy-${a.id}">${COVER(a.title,'',a.img)}<span class="anat-sub">${a.sub}</span></a>`).join('')}</div></div>`;
 }
 
@@ -1122,7 +1149,7 @@ function anatomyView(id){
       <div class="an-list" id="an-list"></div>
     </aside>
   </div>
-  <p class="foot">CT data and structure masks: TotalSegmentator (Wasserthal J, et al. Radiol Artif Intell 2023;5:e230024), Apache-2.0 licence. Structures are segmented automatically; borders are approximate. Scroll with the mouse wheel, arrow keys or a vertical drag. Keys: L labels, Q quiz, 1–4 windows.</p>
+  <p class="foot">${A.credit} Scroll with the mouse wheel, arrow keys or a vertical drag. Keys: L labels, Q quiz, 1–4 windows.</p>
   </div>`;
   const st={id,A,z:0,win:0,labels:'all',hover:0,sel:0,quiz:null,cats:new Set(A.defCats),D:null,dragging:false,score:[0,0]};
   ANAT=st;
@@ -1139,6 +1166,7 @@ function anatomyView(id){
     off.width=hl.width=D.W;off.height=hl.height=D.H;
     rng.max=D.Z-1;
     $('#an-load').hidden=true;
+    if(D.meta.scroll==='sagittal')v.querySelector('.an-scap').textContent='Axial scout · drag to move';
     buildCats();resize();drawScout();draw();
   }).catch(e=>{$('#an-ptxt').textContent='The atlas could not be loaded. Reload the page to try again.';console.error(e)});
 
@@ -1169,7 +1197,7 @@ function anatomyView(id){
     const D=st.D,z=st.z,off0=z*D.H*D.W,acc={};
     for(let y=0;y<D.H;y++)for(let x=0;x<D.W;x++){const l=D.lab[off0+y*D.W+x];if(!l)continue;const a=acc[l]||(acc[l]={n:0,sx:0,sy:0});a.n++;a.sx+=x;a.sy+=y}
     const out=[];
-    for(const k in acc){const s=D.S[k];if(!s||acc[k].n<6)continue;const a=acc[k];let cx=a.sx/a.n,cy=a.sy/a.n;
+    for(const k in acc){const s=D.S[k];if(!s||acc[k].n*D.mm2<13)continue;const a=acc[k];let cx=a.sx/a.n,cy=a.sy/a.n;
       // nearest point inside the mask to its centroid
       let best=1e9,bx=cx,by=cy;const r=Math.ceil(Math.sqrt(a.n))+4;
       for(let y=Math.max(0,Math.floor(cy-r));y<Math.min(D.H,cy+r);y++)for(let x=Math.max(0,Math.floor(cx-r));x<Math.min(D.W,cx+r);x++){if(D.lab[off0+y*D.W+x]==k){const d=(x-cx)**2+(y-cy)**2;if(d<best){best=d;bx=x;by=y}}}
@@ -1189,10 +1217,14 @@ function anatomyView(id){
     const q=st.quiz,focus=q?q.target.id:(st.hover||st.sel);
     if(focus>0&&D.S[focus]){
       const s0=D.S[focus],c=hex(D.meta.cats[s0.cat].color),hm=hctx.createImageData(D.W,D.H);let any=false;
-      for(let y=0;y<D.H;y++)for(let x=0;x<D.W;x++){const i=y*D.W+x;if(D.lab[o+i]!=focus)continue;any=true;
-        const edge=x==0||y==0||x==D.W-1||y==D.H-1||D.lab[o+i-1]!=focus||D.lab[o+i+1]!=focus||D.lab[o+i-D.W]!=focus||D.lab[o+i+D.W]!=focus;
-        hm.data[i*4]=c[0];hm.data[i*4+1]=c[1];hm.data[i*4+2]=c[2];hm.data[i*4+3]=edge?235:95}
-      if(any){hctx.putImageData(hm,0,0);ctx.drawImage(hl,ox,oy,D.W*s,D.H*s)}
+      for(let i=0;i<D.W*D.H;i++){if(D.lab[o+i]!=focus)continue;any=true;hm.data[i*4]=c[0];hm.data[i*4+1]=c[1];hm.data[i*4+2]=c[2];hm.data[i*4+3]=80}
+      if(any){
+        hctx.putImageData(hm,0,0);ctx.imageSmoothingEnabled=true;ctx.drawImage(hl,ox,oy,D.W*s,D.H*s);
+        const segs=anatContour(D.lab,o,D.W,D.H,focus);
+        ctx.beginPath();for(let i=0;i<segs.length;i+=2){ctx.moveTo(ox+segs[i][0]*s,oy+segs[i][1]*s);ctx.lineTo(ox+segs[i+1][0]*s,oy+segs[i+1][1]*s)}
+        ctx.lineCap='round';ctx.strokeStyle='rgba(0,0,0,.55)';ctx.lineWidth=3.2;ctx.stroke();
+        ctx.strokeStyle=D.meta.cats[s0.cat].color;ctx.lineWidth=1.7;ctx.stroke();
+      }
     }
     // labels
     const items=sliceStructs().filter(it=>st.cats.has(it.s.cat));
@@ -1208,7 +1240,7 @@ function anatomyView(id){
     ctx.font='600 11.5px Manrope, system-ui, sans-serif';ctx.textBaseline='middle';
     const W=cv.width/geo.dpr,H=cv.height/geo.dpr;
     for(const it of items){
-      if(it.n<18)continue;
+      if(it.n*D.mm2<40)continue;
       const px=ox+it.x*s,py=oy+it.y*s,tw=ctx.measureText(it.s.name).width+14,th=19;
       const cands=[[14,-th/2],[-14-tw,-th/2],[-tw/2,-th-12],[-tw/2,12],[18,-th-6],[-18-tw,-th-6],[18,6],[-18-tw,6]];
       let ok=null;
@@ -1229,7 +1261,7 @@ function anatomyView(id){
     if(st.quiz){box.innerHTML='<p class="an-empty">Labels are hidden during the quiz.</p>';$('#an-cnt').textContent='';return}
     const by={};items.forEach(it=>(by[it.s.cat]=by[it.s.cat]||[]).push(it.s));
     $('#an-cnt').textContent=items.length;
-    box.innerHTML=Object.keys(D.meta.cats).filter(k=>by[k]).map(k=>`<div class="an-grp"><div class="an-gh"><i style="background:${D.meta.cats[k].color}"></i>${D.meta.cats[k].name}</div>${by[k].sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true})).map(s=>`<button type="button" data-s="${s.id}" class="${s.id===st.sel?'on':''}">${s.name}</button>`).join('')}</div>`).join('')||'<p class="an-empty">No structures from the selected groups on this slice.</p>';
+    box.innerHTML=Object.keys(D.meta.cats).filter(k=>by[k]).map(k=>`<div class="an-grp"><div class="an-gh"><i style="background:${D.meta.cats[k].color}"></i>${D.meta.cats[k].name}</div>${by[k].sort(anatCmp).map(s=>`<button type="button" data-s="${s.id}" class="${s.id===st.sel?'on':''}">${s.name}</button>`).join('')}</div>`).join('')||'<p class="an-empty">No structures from the selected groups on this slice.</p>';
   }
   function setZ(z){const D=st.D;if(!D)return;z=Math.max(0,Math.min(D.Z-1,z));if(z!==st.z){st.z=z;draw()}}
   function pick(ev){
@@ -1294,7 +1326,7 @@ function anatomyView(id){
   }
   function nextQ(move){
     const D=st.D;
-    const pool=()=>sliceStructs().filter(it=>st.cats.has(it.s.cat)&&it.n>=60);
+    const pool=()=>sliceStructs().filter(it=>st.cats.has(it.s.cat)&&it.n*D.mm2>=135);
     if(move){for(let t=0;t<40;t++){const z=Math.floor(D.Z*0.06+Math.random()*D.Z*0.88);st.z=z;if(pool().length>=4)break}}
     let p=pool();if(p.length<2){st.quiz=null;$('#an-qz').hidden=false;$('#an-qz').innerHTML='<p>Not enough labelled structures here. Scroll to another slice and press Quiz me again.</p>';$('#an-quiz').setAttribute('aria-pressed','false');$('#an-quiz').textContent='Quiz me';draw();return}
     const target=p[Math.floor(Math.random()*p.length)].s;

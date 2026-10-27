@@ -86,6 +86,19 @@ npm run preview
 
 Then open the address it prints.
 
+## Atlas data
+
+Each atlas lives in `anatomy/<id>/` as `meta.json` plus image chunks (`ct_*.webp`, lossy) and label chunks (`lab_*.webp`, lossless). The scripts in `scripts/atlas/` rebuild them:
+
+| Atlas | Source | Licence |
+|---|---|---|
+| CT chest, CT abdomen and pelvis | TotalSegmentator dataset v2.0.1, case s0662 (expert-reviewed masks); pulmonary vessels from the TotalSegmentator `lung_vessels` model | CC BY 4.0 / Apache-2.0 |
+| CT head and neck | TotalSegmentator dataset case s0021, plus TotalSegmentator head and neck models | CC BY 4.0 / Apache-2.0 |
+| MRI brain | MNI ICBM152 2009c template with CerebrA labels | CC0 (labels) / MNI licence (template, free with attribution) |
+| MRI lumbar spine | SPIDER dataset, case 24 (T2) | CC BY 4.0 |
+
+Pipeline: `prep_*.py` writes an `.npz` volume plus label map, then `atlas_build.py <id> <file.npz>` exports the chunks.
+
 ## Image credits and licence
 
 Several figures are from Radiopaedia.org under CC BY-NC-SA: dental numbering (Francis Deng), cervical node levels and Weber (Frank Gaillard), and Rockwood (Andrew Murphy). Credits appear in their captions. That licence allows use only on a non-commercial site. If you add advertising, paid tiers or sponsorship, replace those images first.
