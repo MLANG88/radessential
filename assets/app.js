@@ -1052,10 +1052,11 @@ const ATLAS=[
  {id:'ct-neck',title:'CT head and neck',sub:'Contrast-enhanced CT, skull base to aortic arch · 1.5 mm',img:'neck',
   presets:[['Soft tissue',350,50],['Narrow',250,60],['Bone',2800,600],['Brain',80,40]],defCats:['art','vein','aero','endo','gi','muscle','orbit','sinus','cns'],start:'Left parotid gland',
   credit:'CT and expert-reviewed masks for the spine, thyroid, airway, oesophagus and great vessels: TotalSegmentator dataset v2.0.1 (Wasserthal J, et al. Radiol Artif Intell 2023;5:e230024), CC BY 4.0. Glands, pharynx, mandible, sinuses, muscles, cartilages, internal carotid arteries and jugular veins: TotalSegmentator head and neck models (Apache-2.0), automatic segmentation, borders approximate. Display resampled to 0.75 mm in-plane.'},
- {id:'mri-brain',title:'MRI brain',sub:'T1-weighted MNI ICBM152 template · 1 mm · 97 regions',img:'atlas-brain',
-  presets:[['T1',235,120],['Grey–white',150,150],['Full range',255,128]],defCats:['frontal','parietal','temporal','occipital','limbic','insula','deep','csf','cereb','stem'],start:'Left hippocampus',
+ {id:'mri-brain',title:'MRI brain',sub:'T1- and T2-weighted MNI ICBM152 template · 1 mm · 97 regions',img:'atlas-brain',
+  presets:[['T1',235,120],['Grey–white',150,150],['Full range',255,128]],
+  series:[{name:'T1',key:'ct',presets:[['Standard',235,120],['Grey–white',150,150],['Full range',255,128]]},{name:'T2',key:'img2',presets:[['Standard',240,125],['Grey–white',150,110],['Full range',255,128]]}],defCats:['frontal','parietal','temporal','occipital','limbic','insula','deep','csf','cereb','stem'],start:'Left hippocampus',
   credit:'MRI: MNI ICBM152 2009c nonlinear symmetric template (Fonov V, et al. NeuroImage 2011;54:313–327), Copyright (C) 1993–2004 Louis Collins, McConnell Brain Imaging Centre, Montreal Neurological Institute, McGill University. Labels: CerebrA atlas (Manera AL, et al. Sci Data 2020;7:237), CC0; cortical regions follow the Desikan–Killiany–Tourville protocol. White matter from the template tissue map. Display resampled to 0.5 mm.'},
- {id:'mri-spine',title:'MRI lumbar spine',sub:'Sagittal T2-weighted, 3 T · 3.3 mm sections',img:'atlas-spine',
+ {id:'mri-spine',title:'MRI lumbar spine',sub:'Sagittal T2-weighted, 3 T, healthy discs · 3.3 mm sections',img:'atlas-spine',
   presets:[['T2',255,128],['Bright',190,100],['Contrast',170,150]],defCats:['bone','disc','cns'],start:'L3 vertebra',
   credit:'MRI and expert segmentations: SPIDER dataset (van der Graaf JW, et al. Sci Data 2024;11:264), CC BY 4.0. SPIDER numbers vertebrae upward from the lowest lumbar level; levels here assume five lumbar vertebrae.'}
 ];
@@ -1069,8 +1070,8 @@ async function anatLoad(id,onProgress){
   const meta=await (await fetch(base+'meta.json')).json();
   const [Z,H,W]=meta.shape;
   const chunks=meta.chunks||[{ct:'ct.png',lab:'labels.png',z0:0,n:Z,cols:meta.cols}];
-  const totalFiles=chunks.length*2;let doneFiles=0;
-  const ct=new Uint8Array(Z*H*W),lab=new Uint8Array(Z*H*W);
+  const totalFiles=chunks.length*(chunks[0].img2?3:2);let doneFiles=0;
+  const ct=new Uint8Array(Z*H*W),lab=new Uint8Array(Z*H*W),img2=chunks[0].img2?new Uint8Array(Z*H*W):null;
   const get=async(f,c,out)=>{
     const r=await fetch(base+f);if(!r.ok)throw new Error(f+' '+r.status);
     const blob=await r.blob();
@@ -1081,7 +1082,7 @@ async function anatLoad(id,onProgress){
     doneFiles++;onProgress('Loading scan',doneFiles/totalFiles);
   };
   // load chunks a few at a time
-  const jobs=[];chunks.forEach(c=>{jobs.push(()=>get(c.ct,c,ct));jobs.push(()=>get(c.lab,c,lab))});
+  const jobs=[];chunks.forEach(c=>{jobs.push(()=>get(c.ct,c,ct));jobs.push(()=>get(c.lab,c,lab));if(img2)jobs.push(()=>get(c.img2,c,img2))});
   let next=0;const worker=async()=>{while(next<jobs.length){const j=jobs[next++];await j()}};
   await Promise.all([worker(),worker(),worker(),worker()]);
 
@@ -1098,7 +1099,7 @@ async function anatLoad(id,onProgress){
   const scout=new Uint8Array(Z*W);
   for(let z=0;z<Z;z++)for(let x=0;x<W;x++){let m=0,sum=0,n=0;for(let y=midY-half;y<=midY+half;y++){const v=ct[z*H*W+y*W+x];if(v>m)m=v;sum+=v;n++}scout[(Z-1-z)*W+x]=mr?Math.round(sum/n):m}
   const lut=new Float32Array(meta.lut);
-  return ANAT_CACHE[id]={meta,ct,lab,S,area,level,scout,lut,Z,H,W};
+  return ANAT_CACHE[id]={meta,ct,lab,S,area,level,scout,lut,Z,H,W,vols:{ct,img2}};
 }
 // viewing planes: fix = volume axis held constant (0 z, 1 row, 2 col); r/c = [axis, flip] for image rows/cols
 function anatPlanes(scroll){
@@ -1112,11 +1113,12 @@ function anatCentre(D,fix){
   else{for(let z=0;z<D.Z;z+=4)for(let y=0;y<D.H;y+=2)for(let x=0;x<D.W;x+=4){if(D.lab[(z*D.H+y)*D.W+x]){sum+=y;cnt++}}}
   return cnt?Math.round(sum/cnt):Math.floor(n/2);
 }
-function anatSlice(D,p,idx){
+function anatSlice(D,p,idx,vol){
+  vol=vol||D.ct;
   const dims=[D.Z,D.H,D.W],str=[D.H*D.W,D.W,1],sp=D.meta.spacing;
   const R=dims[p.r[0]],C=dims[p.c[0]],img=new Uint8Array(R*C),lab=new Uint8Array(R*C);
   const base=idx*str[p.fix],sr=str[p.r[0]],sc=str[p.c[0]];
-  for(let r=0;r<R;r++){const rr=p.r[1]?R-1-r:r;for(let c=0;c<C;c++){const cc=p.c[1]?C-1-c:c;const i=base+rr*sr+cc*sc;img[r*C+c]=D.ct[i];lab[r*C+c]=D.lab[i]}}
+  for(let r=0;r<R;r++){const rr=p.r[1]?R-1-r:r;for(let c=0;c<C;c++){const cc=p.c[1]?C-1-c:c;const i=base+rr*sr+cc*sc;img[r*C+c]=vol[i];lab[r*C+c]=D.lab[i]}}
   return {img,lab,R,C,mmR:sp[p.r[0]],mmC:sp[p.c[0]],n:dims[p.fix]};
 }
 // crisp outline of one label on one slice (marching squares through pixel centres)
@@ -1150,7 +1152,8 @@ function anatomyView(id){
   <div class="an-shell">
   <div class="anat-bar">
     <div class="seg" role="group" aria-label="Plane" id="an-planes"></div>
-    <div class="seg" role="group" aria-label="Window">${A.presets.map((p,i)=>`<button type="button" data-win="${i}" aria-pressed="${i===0}">${p[0]}</button>`).join('')}</div>
+    ${A.series?`<div class="seg" role="group" aria-label="Sequence">${A.series.map((x,i)=>`<button type="button" data-ser="${i}" aria-pressed="${i===0}">${x.name}</button>`).join('')}</div>`:''}
+    <div class="seg" role="group" aria-label="Window" id="an-wins"></div>
     <div class="seg" role="group" aria-label="Labels"><button type="button" data-lab="all" aria-pressed="true">All labels</button><button type="button" data-lab="hover" aria-pressed="false">Hover only</button></div>
     <button type="button" class="btn" id="an-quiz" aria-pressed="false">Quiz me</button>
     <button type="button" class="btn an-max" id="an-max" aria-pressed="false" title="Expand the viewer (F)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg><span>Expand</span></button>
@@ -1176,7 +1179,8 @@ function anatomyView(id){
   </div>
   <p class="foot">${A.credit} Scroll with the mouse wheel, arrow keys or a vertical drag. Keys: A/C/S planes, F expand, L labels, Q quiz, 1–4 windows.</p>
   </div>`;
-  const st={id,A,pi:0,pos:[0,0,0],win:0,labels:'all',hover:0,sel:0,quiz:null,cats:new Set(A.defCats),D:null,score:[0,0],max:false};
+  const PR=()=>A.series?A.series[st.ser].presets:A.presets;
+  const st={id,A,ser:0,pi:0,pos:[0,0,0],win:0,labels:'all',hover:0,sel:0,quiz:null,cats:new Set(A.defCats),D:null,score:[0,0],max:false};
   ANAT=st;
   const $=s=>v.querySelector(s);
   const root=$('.anat'),cv=$('#an-cv'),ctx=cv.getContext('2d'),stage=$('#an-stage'),tip=$('#an-tip'),sc=$('#an-scout'),rng=$('#an-range');
@@ -1206,7 +1210,7 @@ function anatomyView(id){
     const n=[st.D.Z,st.D.H,st.D.W][P.fix];rng.max=n-1;
     load();resize();draw();
   }
-  function load(){SL=anatSlice(st.D,P,cur());off.width=hl.width=SL.C;off.height=hl.height=SL.R}
+  function load(){const ser=A.series&&A.series[st.ser];SL=anatSlice(st.D,P,cur(),ser?st.D.vols[ser.key]:null);off.width=hl.width=SL.C;off.height=hl.height=SL.R}
   function buildCats(){
     const D=st.D,used=new Set(D.meta.structures.map(s=>s.cat));
     $('#an-cats').innerHTML=Object.entries(D.meta.cats).filter(([k])=>used.has(k)).map(([k,c])=>`<button type="button" data-cat="${k}" aria-pressed="${st.cats.has(k)}"><i style="background:${c.color}"></i>${c.name}</button>`).join('');
@@ -1229,7 +1233,7 @@ function anatomyView(id){
   // reference image: native plane shows the coronal (or axial) projection; other planes show the native slice with a line
   function drawScout(){
     const D=st.D;if(!D||!P)return;const g=sc.getContext('2d');const sp=D.meta.spacing;
-    const [,W,L]=st.A.presets[0];const lo=L-W/2;
+    const [,W,L]=PR()[0];const lo=L-W/2;
     let w,h,src,mmw,mmh;
     if(P.fix===0){w=D.W;h=D.Z;src=D.scout;mmw=sp[2];mmh=sp[0]}
     else{w=D.W;h=D.H;src=D.ct.subarray(st.pos[0]*D.H*D.W,(st.pos[0]+1)*D.H*D.W);mmw=sp[2];mmh=sp[1]}
@@ -1259,7 +1263,7 @@ function anatomyView(id){
   }
   function draw(){
     const D=st.D;if(!D||!SL)return;
-    const [,W,L]=st.A.presets[st.win],lo=L-W/2,N=SL.R*SL.C,img=octx.createImageData(SL.C,SL.R);
+    const [,W,L]=PR()[st.win],lo=L-W/2,N=SL.R*SL.C,img=octx.createImageData(SL.C,SL.R);
     const g=new Uint8ClampedArray(256);for(let i=0;i<256;i++)g[i]=(D.lut[i]-lo)/W*255;
     for(let i=0;i<N;i++){const val=g[SL.img[i]];img.data[i*4]=img.data[i*4+1]=img.data[i*4+2]=val;img.data[i*4+3]=255}
     octx.putImageData(img,0,0);
@@ -1299,15 +1303,15 @@ function anatomyView(id){
     const {sx,sy,ox,oy,gut,w,h}=geo,D=st.D,dw=SL.C*sx;
     const fs=st.max?12.5:11.5,lh=fs+3,gap=3,pad=8,maxTw=gut-pad*2-10;
     ctx.font=`600 ${fs}px Manrope, system-ui, sans-serif`;ctx.textBaseline='middle';
-    const wrap=t=>{if(ctx.measureText(t).width<=maxTw)return [t];const ws=t.split(' ');let a='',lines=[];for(const x of ws){const tr=a?a+' '+x:x;if(ctx.measureText(tr).width>maxTw&&a){lines.push(a);a=x}else a=tr}lines.push(a);return lines.slice(0,2)};
+    const wrap=t=>{if(ctx.measureText(t).width<=maxTw)return [t];const ws=t.split(' ');let a='',lines=[];for(const x of ws){const tr=a?a+' '+x:x;if(ctx.measureText(tr).width>maxTw&&a){lines.push(a);a=x}else a=tr}lines.push(a);return lines.slice(0,3)};
     const cx=ox+dw/2,cols={L:[],R:[]};
     for(const it of items){if(it.mm<40)continue;const px=ox+it.x*sx,py=oy+it.y*sy,lines=wrap(it.s.name);cols[px<cx?'L':'R'].push({it,px,py,lines,hh:lines.length*lh})}
     for(const side of ['L','R']){
       let c=cols[side];
       // keep the largest structures when a column cannot hold every name
-      const cap=h-16;c.sort((a,b)=>b.it.mm-a.it.mm);let used=0;c=c.filter(e=>{if(used+e.hh+gap>cap)return false;used+=e.hh+gap;return true});
+      const cap=h-36;c.sort((a,b)=>b.it.mm-a.it.mm);let used=0;c=c.filter(e=>{if(used+e.hh+gap>cap)return false;used+=e.hh+gap;return true});
       c.sort((a,b)=>a.py-b.py);
-      let y=8;for(const e of c){e.y=Math.max(e.py-e.hh/2,y);y=e.y+e.hh+gap}
+      let y=28;for(const e of c){e.y=Math.max(e.py-e.hh/2,y);y=e.y+e.hh+gap}
       let lim=h-8;for(let i=c.length-1;i>=0;i--){const e=c[i];if(e.y+e.hh>lim)e.y=lim-e.hh;lim=e.y-gap}
       for(const e of c){
         const col=D.meta.cats[e.it.s.cat].color,ly=e.y+e.hh/2;
@@ -1388,7 +1392,7 @@ function anatomyView(id){
     else if(/^[acsACS]$/.test(k)){const want={a:'ax',c:'cor',s:'sag'}[k.toLowerCase()];const i=st.planes.findIndex(p=>p.k===want);if(i>=0&&i!==st.pi)setPlane(i)}
     else if(k==='l'||k==='L')setLabels(st.labels==='all'?'hover':'all');
     else if(k==='q'||k==='Q')toggleQuiz();
-    else if(/^[1-4]$/.test(k)&&st.A.presets[+k-1])setWin(+k-1);
+    else if(/^[1-4]$/.test(k)&&PR()[+k-1])setWin(+k-1);
   };
   document.addEventListener('keydown',onKey);
   const onResize=()=>{if(ANAT===st){resize();draw()}};window.addEventListener('resize',onResize);
@@ -1399,10 +1403,14 @@ function anatomyView(id){
     if(P.fix===0)setIdx(D.Z-1-Math.floor(fy*D.Z));else if(P.fix===1)setIdx(Math.floor(fy*D.H));else setIdx(Math.floor(fx*D.W))};
   sc.addEventListener('pointerdown',ev=>{if(!st.D)return;scDrag=true;sc.setPointerCapture(ev.pointerId);scMove(ev)});
   sc.addEventListener('pointermove',ev=>{if(scDrag)scMove(ev)});sc.addEventListener('pointerup',()=>scDrag=false);
+  function renderWins(){$('#an-wins').innerHTML=PR().map((p,i)=>`<button type="button" data-win="${i}" aria-pressed="${i===st.win}">${p[0]}</button>`).join('')}
+  renderWins();
   function setWin(i){st.win=i;v.querySelectorAll('[data-win]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.win===i));draw()}
+  function setSer(i){st.ser=i;st.win=0;v.querySelectorAll('[data-ser]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.ser===i));renderWins();load();draw()}
   function setLabels(m){st.labels=m;v.querySelectorAll('[data-lab]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lab===m));resize();draw()}
   v.querySelector('.anat-bar').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b||!st.D)return;
     if(b.dataset.plane!==undefined)setPlane(+b.dataset.plane);
+    else if(b.dataset.ser!==undefined)setSer(+b.dataset.ser);
     else if(b.dataset.win)setWin(+b.dataset.win);else if(b.dataset.lab)setLabels(b.dataset.lab);else if(b.id==='an-quiz')toggleQuiz();else if(b.id==='an-max')setMax(!st.max)});
   $('#an-cats').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;const k=b.dataset.cat;st.cats.has(k)?st.cats.delete(k):st.cats.add(k);b.setAttribute('aria-pressed',st.cats.has(k));if(st.sel&&!st.cats.has(st.D.S[st.sel].cat))st.sel=0;draw()});
   const list=$('#an-list');

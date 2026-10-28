@@ -58,6 +58,11 @@ def main():
         lut = list(range(256))
         to8 = lambda a: np.clip(np.round((a - lo) / (hi - lo) * 255), 0, 255).astype(np.uint8)
 
+    extra = d['img2'].astype(np.float32) if 'img2' in d.files else None
+    if extra is not None:
+        lo2, hi2 = np.percentile(extra[extra > np.percentile(extra, 5)], [0.5, 99.7])
+        if up != 1: extra = ndi.zoom(extra, (1, up, up), order=3, grid_mode=True, mode='nearest')
+        ex8 = np.clip(np.round((extra - lo2) / (hi2 - lo2) * 255), 0, 255).astype(np.uint8)
     if up != 1:
         img = ndi.zoom(img, (1, up, up), order=3, grid_mode=True, mode='nearest')
         lab = upsample_labels(lab, up)
@@ -79,14 +84,19 @@ def main():
             mi[r * H:(r + 1) * H, c * W:(c + 1) * W] = im8[z0 + i]
             ml[r * H:(r + 1) * H, c * W:(c + 1) * W] = lab[z0 + i]
         Image.fromarray(mi, 'L').convert('RGB').save(f'{od}/ct_{k}.webp', quality=q, method=6)
+        if extra is not None:
+            m2 = np.zeros_like(mi)
+            for i in range(n):
+                r, c = divmod(i, cols); m2[r * H:(r + 1) * H, c * W:(c + 1) * W] = ex8[z0 + i]
+            Image.fromarray(m2, 'L').convert('RGB').save(f'{od}/img2_{k}.webp', quality=q, method=6)
         Image.fromarray(ml, 'L').convert('RGB').save(f'{od}/lab_{k}.webp', lossless=True, quality=100, method=6)
-        chunks.append({'ct': f'ct_{k}.webp', 'lab': f'lab_{k}.webp', 'z0': z0, 'n': n, 'cols': cols})
+        chunks.append({'ct': f'ct_{k}.webp', 'lab': f'lab_{k}.webp', 'z0': z0, 'n': n, 'cols': cols, **({'img2': f'img2_{k}.webp'} if extra is not None else {})})
 
     present = set(np.unique(lab).tolist()) - {0}
     structs = [s for s in side['structures'] if s['id'] in present]
     meta = {'v': 2, 'modality': modality, 'scroll': side.get('scroll', 'axial'), 'lut': lut, 'shape': [Z, H, W], 'spacing': spacing,
             'chunks': chunks, 'cats': side['cats'], 'structures': structs}
-    for k in ('levels', 'orient'):
+    for k in ('levels', 'orient', 'series'):
         if k in side: meta[k] = side[k]
     json.dump(meta, open(od + '/meta.json', 'w'), separators=(',', ':'))
     tot = sum(os.path.getsize(os.path.join(od, f)) for f in os.listdir(od))

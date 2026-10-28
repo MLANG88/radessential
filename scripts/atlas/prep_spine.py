@@ -45,7 +45,7 @@ y0, y1 = max(0, ys.min() - my), min(a.shape[1], ys.max() + 2 * my + 1)
 x0, x1 = max(0, xs.min() - mx), min(a.shape[2], xs.max() + mx + 1)
 a = a[:, y0:y1, x0:x1]; out = out[:, y0:y1, x0:x1]
 # intensity: clip bright fat so marrow, discs and CSF keep contrast
-hi = np.percentile(a[out > 0], 99.5) * 1.15
+hi = np.percentile(a, 99.7)
 a = np.clip(a, 0, hi)
 np.savez_compressed('/tmp/claude-0/prep/spine.npz', img=a, lab=out, spacing=np.array([sx, sy, sy]))
 json.dump({'structures': structs, 'cats': {k: {'name': v[0], 'color': v[1]} for k, v in CATS.items()}, 'modality': 'MR', 'scroll': 'sagittal'},

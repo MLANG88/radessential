@@ -6,6 +6,7 @@ B = '/tmp/claude-0/brain'
 t1 = nib.as_closest_canonical(nib.load(f'{B}/mni/mni_icbm152_nlin_sym_09c/mni_icbm152_t1_tal_nlin_sym_09c.nii'))
 lab_img = nib.as_closest_canonical(nib.load(f'{B}/cerebra/mni_icbm152_CerebrA_tal_nlin_sym_09c.nii'))
 img = t1.get_fdata().astype(np.float32)
+img2 = nib.as_closest_canonical(nib.load(f'{B}/mni/mni_icbm152_nlin_sym_09c/mni_icbm152_t2_tal_nlin_sym_09c.nii')).get_fdata().astype(np.float32)
 lab = np.asarray(lab_img.dataobj).astype(np.int16)
 assert img.shape == lab.shape, (img.shape, lab.shape)
 wm_p = f'{B}/mni/mni_icbm152_nlin_sym_09c/mni_icbm152_wm_tal_nlin_sym_09c.nii'
@@ -77,10 +78,10 @@ pad = 4
 x0, x1 = max(0, xs.min() - pad), xs.max() + pad + 1
 y0, y1 = max(0, ys.min() - pad), ys.max() + pad + 1
 z0, z1 = max(0, brain_z.min() - 12), min(img.shape[2], brain_z.max() + 6)
-img = img[x0:x1, y0:y1, z0:z1]; out = out[x0:x1, y0:y1, z0:z1]
+img = img[x0:x1, y0:y1, z0:z1]; img2 = img2[x0:x1, y0:y1, z0:z1]; out = out[x0:x1, y0:y1, z0:z1]
 disp = lambda a: np.transpose(a[::-1, ::-1, :], (2, 1, 0))
 zooms = [float(z) for z in t1.header.get_zooms()[:3]]
-np.savez_compressed('/tmp/claude-0/prep/brain.npz', img=disp(img), lab=disp(out), spacing=np.array([zooms[2], zooms[1], zooms[0]]))
-json.dump({'structures': structs, 'cats': {k: {'name': v[0], 'color': v[1]} for k, v in CATS.items()}, 'modality': 'MR', 'scroll': 'axial'},
+np.savez_compressed('/tmp/claude-0/prep/brain.npz', img=disp(img), img2=disp(img2), lab=disp(out), spacing=np.array([zooms[2], zooms[1], zooms[0]]))
+json.dump({'structures': structs, 'cats': {k: {'name': v[0], 'color': v[1]} for k, v in CATS.items()}, 'modality': 'MR', 'scroll': 'axial', 'series': ['T1', 'T2']},
           open('/tmp/claude-0/prep/brain.json', 'w'))
 print('brain', disp(img).shape, len(structs))
