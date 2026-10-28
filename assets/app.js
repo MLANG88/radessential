@@ -200,6 +200,37 @@ ${T(['Group','Criteria'],[
 refs:[{c:'Biffl WL, Moore EE, Offner PJ, Brega KE, Franciose RJ, Burch JM. Blunt carotid arterial injuries: implications of a new grading scale. J Trauma. 1999;47:845–853.',q:'Biffl Moore blunt carotid arterial injuries implications new grading scale'},{c:'Geddes AE, Burlew CC, Wagenaar AE, et al. Expanded screening criteria for blunt cerebrovascular injury: a bigger impact than anticipated. Am J Surg. 2016;212:1167–1174.',q:'Geddes Burlew expanded screening criteria blunt cerebrovascular injury bigger impact than anticipated'}],rp:'blunt cerebrovascular injury'});
 
 /* ===== HEAD & NECK ===== */
+add({id:'csf-leak',sec:'neuro',title:'CSF leak types (spontaneous intracranial hypotension)',alias:'csf leak sih spontaneous intracranial hypotension schievink classification ventral dural tear posterolateral lateral leak meningeal diverticulum csf-venous fistula cvf bern score myelography dsm ctm decubitus hyperdense paraspinal vein rhinorrhea otorrhea skull base',ver:'Schievink 2016 · Bern score 2019',tags:['MRI','CT myelography','DSM'],
+lede:'Spinal CSF leaks fall into four types by mechanism. Brain MRI sets the pre-test probability (Bern score); spine imaging then decides between a fast leak (extradural fluid: types 1 and 2) and a slow leak without extradural fluid (CSF-venous fistula, type 3).',
+body:`<h3>Spinal CSF leaks: Schievink classification</h3>
+${T(['Type','Lesion','Extradural CSF on spine MRI / CTM','Typical imaging and work-up'],[
+ ['1a','Ventral dural tear, usually from a calcified disc-osteophyte spicule, mostly thoracic','Yes, often long-segment','Look for a calcified ventral spicule on CT. Prone dynamic myelography (DSM or dynamic CTM) localizes the tear'],
+ ['1b','Posterolateral (lateral) dural tear, often near the nerve root sleeve','Yes','Lateral decubitus dynamic myelography on the side of the extradural collection'],
+ ['2a','Simple meningeal diverticulum (nerve root sleeve)','Yes','Leaking diverticulum, usually thoracic'],
+ ['2b','Complex meningeal diverticulum or dural ectasia','Yes','Often seen in connective tissue disorders'],
+ ['3','CSF-venous fistula: direct communication between the subarachnoid space and a paraspinal or epidural vein','No','Lateral decubitus CTM or DSM, ideally with high temporal and spatial resolution (photon-counting CT where available). Signs: hyperdense paraspinal vein, opacified epidural or foraminal vein; often next to a nerve root diverticulum, most often lower thoracic, more often right-sided'],
+ ['4','Indeterminate: SIH with no leak found','No','Repeat targeted myelography; consider an empiric epidural blood patch']])}
+${P(['Fast leak (types 1–2): extradural CSF on fat-saturated T2 spine MRI or CTM. The collection can extend far from the leak site, so it does not localize the leak by itself.','Slow leak (type 3): no extradural CSF. Use decubitus positioning, image immediately after injection, and use bone-subtracted or thin-section CT.','A normal brain MRI does not exclude SIH, and a normal opening pressure does not exclude a leak.'])}
+<h3>Bern SIH score (brain MRI)</h3>
+${T(['Finding','Threshold','Points'],[
+ ['Pachymeningeal enhancement','Diffuse, smooth dural enhancement',B('2','warn')],
+ ['Venous sinus engorgement','Convex inferior margin of the dominant transverse sinus',B('2','warn')],
+ ['Suprasellar cistern effacement','≤ 4.0 mm',B('2','warn')],
+ ['Subdural fluid collection','Hygroma or haematoma',B('1','info')],
+ ['Prepontine cistern effacement','≤ 5.0 mm',B('1','info')],
+ ['Mamillopontine distance','≤ 6.5 mm',B('1','info')]])}
+${T(['Total (0–9)','Probability of a spinal CSF leak'],[['≤ 2',B('Low','ok')],['3–4',B('Intermediate','warn')],['≥ 5',B('High','crit')]])}
+<h3>Cranial (skull base) CSF leaks</h3>
+${T(['Site','Clinical presentation','Best imaging'],[
+ ['Cribriform plate / fovea ethmoidalis','CSF rhinorrhea, recurrent meningitis','Thin-section CT of the skull base for the bony defect; CT or MR cisternography if there are several candidate defects'],
+ ['Lateral recess of the sphenoid sinus','CSF rhinorrhea, often with obesity and idiopathic intracranial hypertension','Thin-section CT; look for arachnoid pits and meningoencephalocele'],
+ ['Tegmen tympani / mastoideum','CSF otorrhea or middle-ear effusion (rhinorrhea through the Eustachian tube)','Temporal bone CT, with MRI for encephalocele'],
+ ['Post-traumatic or post-operative','Fracture or surgical defect','CT; CT cisternography for an active leak']])}
+${N('Skull base leaks cause rhinorrhea or otorrhea and usually do not cause orthostatic headache. Spinal leaks cause SIH. Associated idiopathic intracranial hypertension is common in spontaneous skull base leaks and can unmask after repair.')}`,
+refs:[{c:'Schievink WI, Maya MM, Jean-Pierre S, Nuño M, Prasad RS, Moser FG. A classification system of spontaneous spinal CSF leaks. Neurology. 2016;87:673–679.',q:'Schievink classification system of spontaneous spinal CSF leaks Neurology 2016'},
+ {c:'Dobrocky T, Grunder L, Breiding PS, et al. Assessing spinal cerebrospinal fluid leaks in spontaneous intracranial hypotension with a scoring system based on brain magnetic resonance imaging findings. JAMA Neurol. 2019;76:580–587.',q:'Dobrocky Bern score spontaneous intracranial hypotension JAMA Neurology 2019'},
+ {c:'Schievink WI, Maya MM, Tay ASS, et al. Lateral spinal CSF leaks in patients with spontaneous intracranial hypotension: radiologic-anatomic study of different variants. AJNR Am J Neuroradiol. 2024;45:951–956.',q:'Schievink lateral spinal CSF leaks AJNR 2024'},
+ {c:'Kranz PG, Gray L, Malinzak MD, Houk JL, Kim DK, Amrhein TJ. CSF-venous fistulas: anatomy and diagnostic imaging. AJR Am J Roentgenol. 2021;217:1418–1429.',q:'Kranz CSF-venous fistulas anatomy and diagnostic imaging AJR 2021'}],rp:'spontaneous intracranial hypotension'});
 add({id:'neck-nodes',sec:'hn',title:'Cervical lymph node levels',alias:'neck node stations level ia ib iia iib iii iv va vb vi vii som retropharyngeal supraclavicular',ver:'Som 1999 · AJCC',tags:['CT','MRI','Staging'],
 lede:'Imaging-based level classification using landmarks visible on axial CT/MRI. Levels track the clinical (AAO-HNS) system.',
 body:`${ILLUS(['fig-neck-nodes','Cervical lymph node levels. Image: Frank Gaillard, Radiopaedia.org, CC BY-NC-SA'])}${T(['Level','Boundaries on axial imaging'],[
