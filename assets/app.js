@@ -1062,6 +1062,9 @@ const ATLAS=[
   presets:[['T1',235,120],['Grey–white',150,150],['Full range',255,128]],
   series:[{name:'T1',key:'ct',presets:[['Standard',235,120],['Grey–white contrast',150,150]]},{name:'T2',key:'img2',presets:[['Standard',240,125],['Grey–white contrast',150,110]]}],defCats:['frontal','parietal','temporal','occipital','limbic','insula','deep','csf','cereb','stem'],start:'Left hippocampus',
   credit:'MRI: MNI ICBM152 2009c nonlinear symmetric template (Fonov V, et al. NeuroImage 2011;54:313–327), Copyright (C) 1993–2004 Louis Collins, McConnell Brain Imaging Centre, Montreal Neurological Institute, McGill University. Labels: CerebrA atlas (Manera AL, et al. Sci Data 2020;7:237), CC0; cortical regions follow the Desikan–Killiany–Tourville protocol. White matter from the template tissue map. Display resampled to 0.5 mm.'},
+ {id:'mri-cspine',title:'MRI cervical spine',sub:'3D T2-weighted, healthy volunteer, 3 T · 0.8 mm isotropic',img:'atlas-cspine',startPlane:'sag',
+  presets:[['T2',255,128]],defCats:['bone','disc','cns'],start:'C4 vertebra',
+  credit:'MRI and expert-corrected spinal cord segmentation and disc labels: Spine Generic public database (Cohen-Adad J, et al. Sci Data 2021;8:219), CC BY 4.0. Vertebrae and disc outlines: TotalSegmentator MR models (Apache-2.0), automatic, borders approximate.'},
  {id:'mri-spine',title:'MRI lumbar spine',sub:'Sagittal T2-weighted, 3 T, healthy discs · 3.3 mm sections',img:'atlas-spine',
   presets:[['T2',255,128]],defCats:['bone','disc','cns'],start:'L3 vertebra',
   credit:'MRI and expert segmentations: SPIDER dataset (van der Graaf JW, et al. Sci Data 2024;11:264), CC BY 4.0. SPIDER numbers vertebrae upward from the lowest lumbar level; levels here assume five lumbar vertebrae.'}
@@ -1212,7 +1215,7 @@ function anatomyView(id){
     $('#an-planes').hidden=st.planes.length<2;
     $('#an-planes').innerHTML=st.planes.map((p,i)=>`<button type="button" data-plane="${i}" aria-pressed="${i===0}">${p.name}</button>`).join('');
     $('#an-load').hidden=true;
-    buildCats();setPlane(0);
+    buildCats();const sp=A.startPlane?st.planes.findIndex(p=>p.k===A.startPlane):0;setPlane(sp>0?sp:0);
   }).catch(e=>{$('#an-ptxt').textContent='The atlas could not be loaded. Reload the page to try again.';console.error(e)});
 
   function setPlane(i){
