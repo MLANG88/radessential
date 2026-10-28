@@ -1215,12 +1215,15 @@ function anatomyView(id){
     const D=st.D;if(!D||!SL)return;
     const dpr=window.devicePixelRatio||1,r=stage.getBoundingClientRect(),w=r.width;
     const mmW=SL.C*SL.mmC,mmH=SL.R*SL.mmR;
+    // side gutters hold the label columns so text never sits on the image
+    const gut=st.labels==='all'&&w>=560&&!st.quiz?Math.round(Math.max(130,Math.min(250,w*(st.max?0.19:0.21)))):0;
+    const iw=w-2*gut;
     const maxH=st.max?Math.max(240,window.innerHeight-r.top-14):window.innerHeight*0.8;
-    const h=st.max?maxH:Math.min(w*mmH/mmW,maxH);
+    const h=st.max?maxH:Math.min(iw*mmH/mmW,maxH);
     stage.style.height=h+'px';
     cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);cv.style.width=w+'px';cv.style.height=h+'px';
-    const k=Math.min(w/mmW,h/mmH);
-    geo={sx:SL.mmC*k,sy:SL.mmR*k,ox:(w-mmW*k)/2,oy:(h-mmH*k)/2,dpr};
+    const k=Math.min(iw/mmW,(h-(gut?8:0))/mmH);
+    geo={sx:SL.mmC*k,sy:SL.mmR*k,ox:(w-mmW*k)/2,oy:(h-mmH*k)/2,dpr,gut,w,h};
     drawScout();
   }
   // reference image: native plane shows the coronal (or axial) projection; other planes show the native slice with a line
@@ -1277,7 +1280,7 @@ function anatomyView(id){
     }
     const items=sliceStructs().filter(it=>st.cats.has(it.s.cat));
     st.items=items;
-    if(!q&&st.labels==='all')drawLabels(items);
+    if(!q&&st.labels==='all')(geo.gut?drawGutterLabels(items):drawLabels(items));
     const n=[D.Z,D.H,D.W][P.fix],i=cur();
     $('#an-pos').textContent=`${P.name} · ${P.fix===0?n-i:i+1} of ${n}`;
     $('#an-lvl').textContent=P.fix===0&&D.level[i]?`Level ${D.level[i]}`:'';
@@ -1291,6 +1294,31 @@ function anatomyView(id){
     if(P.k==='ax')return '<b class="l">R</b><b class="r">L</b><b class="t">A</b><b class="b">P</b>';
     if(P.k==='cor')return '<b class="l">R</b><b class="r">L</b><b class="t">S</b><b class="b">I</b>';
     return '<b class="l">A</b><b class="r">P</b><b class="t">S</b><b class="b">I</b>';
+  }
+  function drawGutterLabels(items){
+    const {sx,sy,ox,oy,gut,w,h}=geo,D=st.D,dw=SL.C*sx;
+    const fs=st.max?12.5:11.5,lh=fs+3,gap=3,pad=8,maxTw=gut-pad*2-10;
+    ctx.font=`600 ${fs}px Manrope, system-ui, sans-serif`;ctx.textBaseline='middle';
+    const wrap=t=>{if(ctx.measureText(t).width<=maxTw)return [t];const ws=t.split(' ');let a='',lines=[];for(const x of ws){const tr=a?a+' '+x:x;if(ctx.measureText(tr).width>maxTw&&a){lines.push(a);a=x}else a=tr}lines.push(a);return lines.slice(0,2)};
+    const cx=ox+dw/2,cols={L:[],R:[]};
+    for(const it of items){if(it.mm<40)continue;const px=ox+it.x*sx,py=oy+it.y*sy,lines=wrap(it.s.name);cols[px<cx?'L':'R'].push({it,px,py,lines,hh:lines.length*lh})}
+    for(const side of ['L','R']){
+      let c=cols[side];
+      // keep the largest structures when a column cannot hold every name
+      const cap=h-16;c.sort((a,b)=>b.it.mm-a.it.mm);let used=0;c=c.filter(e=>{if(used+e.hh+gap>cap)return false;used+=e.hh+gap;return true});
+      c.sort((a,b)=>a.py-b.py);
+      let y=8;for(const e of c){e.y=Math.max(e.py-e.hh/2,y);y=e.y+e.hh+gap}
+      let lim=h-8;for(let i=c.length-1;i>=0;i--){const e=c[i];if(e.y+e.hh>lim)e.y=lim-e.hh;lim=e.y-gap}
+      for(const e of c){
+        const col=D.meta.cats[e.it.s.cat].color,ly=e.y+e.hh/2;
+        const tx=side==='L'?gut-pad:w-gut+pad, ex=side==='L'?gut-pad+4:w-gut+pad-4;
+        ctx.globalAlpha=.8;ctx.beginPath();ctx.moveTo(e.px,e.py);ctx.lineTo(side==='L'?Math.min(ox-2,e.px):Math.max(ox+dw+2,e.px),ly);ctx.lineTo(ex,ly);ctx.strokeStyle=col;ctx.lineWidth=1;ctx.stroke();ctx.globalAlpha=1;
+        ctx.beginPath();ctx.arc(e.px,e.py,2.8,0,7);ctx.fillStyle=col;ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='#000';ctx.stroke();
+        ctx.fillStyle=e.it.s.id===st.sel||e.it.s.id===st.hover?col:'#e3edf1';ctx.textAlign=side==='L'?'right':'left';
+        e.lines.forEach((t,i)=>ctx.fillText(t,tx,e.y+lh/2+i*lh+.5));
+        ctx.textAlign='left';
+      }
+    }
   }
   function drawLabels(items){
     const {sx,sy,ox,oy}=geo,D=st.D,placed=[];
@@ -1372,7 +1400,7 @@ function anatomyView(id){
   sc.addEventListener('pointerdown',ev=>{if(!st.D)return;scDrag=true;sc.setPointerCapture(ev.pointerId);scMove(ev)});
   sc.addEventListener('pointermove',ev=>{if(scDrag)scMove(ev)});sc.addEventListener('pointerup',()=>scDrag=false);
   function setWin(i){st.win=i;v.querySelectorAll('[data-win]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.win===i));draw()}
-  function setLabels(m){st.labels=m;v.querySelectorAll('[data-lab]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lab===m));draw()}
+  function setLabels(m){st.labels=m;v.querySelectorAll('[data-lab]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lab===m));resize();draw()}
   v.querySelector('.anat-bar').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b||!st.D)return;
     if(b.dataset.plane!==undefined)setPlane(+b.dataset.plane);
     else if(b.dataset.win)setWin(+b.dataset.win);else if(b.dataset.lab)setLabels(b.dataset.lab);else if(b.id==='an-quiz')toggleQuiz();else if(b.id==='an-max')setMax(!st.max)});
@@ -1391,8 +1419,8 @@ function anatomyView(id){
   // ---- quiz
   function toggleQuiz(){
     const b=$('#an-quiz');
-    if(st.quiz){st.quiz=null;b.setAttribute('aria-pressed','false');b.textContent='Quiz me';$('#an-qz').hidden=true;draw();return}
-    b.setAttribute('aria-pressed','true');b.textContent='End quiz';st.score=[0,0];st.sel=0;st.hover=0;tip.hidden=true;nextQ(false);
+    if(st.quiz){st.quiz=null;b.setAttribute('aria-pressed','false');b.textContent='Quiz me';$('#an-qz').hidden=true;resize();draw();return}
+    b.setAttribute('aria-pressed','true');b.textContent='End quiz';st.score=[0,0];st.sel=0;st.hover=0;tip.hidden=true;st.quiz={};resize();st.quiz=null;nextQ(false);
   }
   function nextQ(move){
     const D=st.D,n=[D.Z,D.H,D.W][P.fix];
