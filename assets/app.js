@@ -1054,10 +1054,10 @@ const ATLAS=[
   credit:'CT and expert-reviewed masks for the spine, thyroid, airway, oesophagus and great vessels: TotalSegmentator dataset v2.0.1 (Wasserthal J, et al. Radiol Artif Intell 2023;5:e230024), CC BY 4.0. Glands, pharynx, mandible, sinuses, muscles, cartilages, internal carotid arteries and jugular veins: TotalSegmentator head and neck models (Apache-2.0), automatic segmentation, borders approximate. Display resampled to 0.75 mm in-plane.'},
  {id:'mri-brain',title:'MRI brain',sub:'T1- and T2-weighted MNI ICBM152 template · 1 mm · 97 regions',img:'atlas-brain',
   presets:[['T1',235,120],['Grey–white',150,150],['Full range',255,128]],
-  series:[{name:'T1',key:'ct',presets:[['Standard',235,120],['Grey–white',150,150],['Full range',255,128]]},{name:'T2',key:'img2',presets:[['Standard',240,125],['Grey–white',150,110],['Full range',255,128]]}],defCats:['frontal','parietal','temporal','occipital','limbic','insula','deep','csf','cereb','stem'],start:'Left hippocampus',
+  series:[{name:'T1',key:'ct',presets:[['Standard',235,120],['Grey–white contrast',150,150]]},{name:'T2',key:'img2',presets:[['Standard',240,125],['Grey–white contrast',150,110]]}],defCats:['frontal','parietal','temporal','occipital','limbic','insula','deep','csf','cereb','stem'],start:'Left hippocampus',
   credit:'MRI: MNI ICBM152 2009c nonlinear symmetric template (Fonov V, et al. NeuroImage 2011;54:313–327), Copyright (C) 1993–2004 Louis Collins, McConnell Brain Imaging Centre, Montreal Neurological Institute, McGill University. Labels: CerebrA atlas (Manera AL, et al. Sci Data 2020;7:237), CC0; cortical regions follow the Desikan–Killiany–Tourville protocol. White matter from the template tissue map. Display resampled to 0.5 mm.'},
  {id:'mri-spine',title:'MRI lumbar spine',sub:'Sagittal T2-weighted, 3 T, healthy discs · 3.3 mm sections',img:'atlas-spine',
-  presets:[['T2',255,128],['Bright',190,100],['Contrast',170,150]],defCats:['bone','disc','cns'],start:'L3 vertebra',
+  presets:[['T2',255,128]],defCats:['bone','disc','cns'],start:'L3 vertebra',
   credit:'MRI and expert segmentations: SPIDER dataset (van der Graaf JW, et al. Sci Data 2024;11:264), CC BY 4.0. SPIDER numbers vertebrae upward from the lowest lumbar level; levels here assume five lumbar vertebrae.'}
 ];
 const lcName=n=>/^[A-Z]\d/.test(n)?n:n.charAt(0).toLowerCase()+n.slice(1);
@@ -1403,7 +1403,7 @@ function anatomyView(id){
     if(P.fix===0)setIdx(D.Z-1-Math.floor(fy*D.Z));else if(P.fix===1)setIdx(Math.floor(fy*D.H));else setIdx(Math.floor(fx*D.W))};
   sc.addEventListener('pointerdown',ev=>{if(!st.D)return;scDrag=true;sc.setPointerCapture(ev.pointerId);scMove(ev)});
   sc.addEventListener('pointermove',ev=>{if(scDrag)scMove(ev)});sc.addEventListener('pointerup',()=>scDrag=false);
-  function renderWins(){$('#an-wins').innerHTML=PR().map((p,i)=>`<button type="button" data-win="${i}" aria-pressed="${i===st.win}">${p[0]}</button>`).join('')}
+  function renderWins(){const w=$('#an-wins');w.hidden=PR().length<2;w.innerHTML=PR().map((p,i)=>`<button type="button" data-win="${i}" aria-pressed="${i===st.win}" title="${A.series||A.id.startsWith('mri')?(i?'Narrower window: more contrast between grey and white matter':'Default brightness and contrast'):`Window ${p[1]}, level ${p[2]}`}">${p[0]}</button>`).join('')}
   renderWins();
   function setWin(i){st.win=i;v.querySelectorAll('[data-win]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.win===i));draw()}
   function setSer(i){st.ser=i;st.win=0;v.querySelectorAll('[data-ser]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.ser===i));renderWins();load();draw()}
