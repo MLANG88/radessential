@@ -1052,6 +1052,12 @@ const ATLAS=[
  {id:'ct-neck',title:'CT head and neck',sub:'Contrast-enhanced CT, skull base to aortic arch · 1.5 mm',img:'neck',
   presets:[['Soft tissue',350,50],['Narrow',250,60],['Bone',2800,600],['Brain',80,40]],defCats:['art','vein','aero','endo','gi','muscle','orbit','sinus','cns'],start:'Left parotid gland',
   credit:'CT and expert-reviewed masks for the spine, thyroid, airway, oesophagus and great vessels: TotalSegmentator dataset v2.0.1 (Wasserthal J, et al. Radiol Artif Intell 2023;5:e230024), CC BY 4.0. Glands, pharynx, mandible, sinuses, muscles, cartilages, internal carotid arteries and jugular veins: TotalSegmentator head and neck models (Apache-2.0), automatic segmentation, borders approximate. Display resampled to 0.75 mm in-plane.'},
+ {id:'mra-brain',minMM:2,title:'MRA brain arteries',sub:'3D time-of-flight MRA · 0.3 mm · 40 named arteries',img:'atlas-mra',mip:[10,20],
+  presets:[['Standard',255,128],['Vessels',170,170]],defCats:['ant','post','comm','eca'],start:'Anterior communicating artery',
+  credit:'Images and expert vessel labels: TopBrain 2025 challenge data (University Hospital Zurich; TopCoW/TopBrain challenge organisers), open use for non-commercial purposes with attribution. Circle of Willis complete in this case.'},
+ {id:'cta-brain',minMM:3,title:'CTA head vessels',sub:'CT angiography · 0.5 mm · arteries, deep veins and sinuses',img:'atlas-cta',mip:[10,20],
+  presets:[['Angio',700,200],['Brain',80,40],['Bone',2800,600]],defCats:['ant','post','comm','eca','vein'],start:'Basilar artery',
+  credit:'Images and expert vessel labels: TopBrain 2025 challenge data (University Hospital Zurich; TopCoW/TopBrain challenge organisers), open use for non-commercial purposes with attribution. '},
  {id:'mri-brain',title:'MRI brain',sub:'T1- and T2-weighted MNI ICBM152 template · 1 mm · 97 regions',img:'atlas-brain',
   presets:[['T1',235,120],['Grey–white',150,150],['Full range',255,128]],
   series:[{name:'T1',key:'ct',presets:[['Standard',235,120],['Grey–white contrast',150,150]]},{name:'T2',key:'img2',presets:[['Standard',240,125],['Grey–white contrast',150,110]]}],defCats:['frontal','parietal','temporal','occipital','limbic','insula','deep','csf','cereb','stem'],start:'Left hippocampus',
@@ -1113,8 +1119,15 @@ function anatCentre(D,fix){
   else{for(let z=0;z<D.Z;z+=4)for(let y=0;y<D.H;y+=2)for(let x=0;x<D.W;x+=4){if(D.lab[(z*D.H+y)*D.W+x]){sum+=y;cnt++}}}
   return cnt?Math.round(sum/cnt):Math.floor(n/2);
 }
-function anatSlice(D,p,idx,vol){
+function anatSlice(D,p,idx,vol,slab){
   vol=vol||D.ct;
+  if(slab>0){  // maximum-intensity projection over idx±slab; label = labelled voxel with the highest signal
+    const n=[D.Z,D.H,D.W][p.fix],out=anatSlice(D,p,idx,vol,0),N=out.R*out.C,lv=new Uint8Array(N);
+    for(let i=0;i<N;i++)lv[i]=out.lab[i]?out.img[i]:0;
+    for(let d=-slab;d<=slab;d++){const j=idx+d;if(!d||j<0||j>=n)continue;const t=anatSlice(D,p,j,vol,0);
+      for(let i=0;i<N;i++){const v=t.img[i];if(v>out.img[i])out.img[i]=v;if(t.lab[i]&&v>lv[i]){lv[i]=v;out.lab[i]=t.lab[i]}}}
+    return out;
+  }
   const dims=[D.Z,D.H,D.W],str=[D.H*D.W,D.W,1],sp=D.meta.spacing;
   const R=dims[p.r[0]],C=dims[p.c[0]],img=new Uint8Array(R*C),lab=new Uint8Array(R*C);
   const base=idx*str[p.fix],sr=str[p.r[0]],sc=str[p.c[0]];
@@ -1154,6 +1167,7 @@ function anatomyView(id){
     <div class="seg" role="group" aria-label="Plane" id="an-planes"></div>
     ${A.series?`<div class="seg" role="group" aria-label="Sequence">${A.series.map((x,i)=>`<button type="button" data-ser="${i}" aria-pressed="${i===0}">${x.name}</button>`).join('')}</div>`:''}
     <div class="seg" role="group" aria-label="Window" id="an-wins"></div>
+    ${A.mip?`<div class="seg" role="group" aria-label="Projection">${[[0,'Slice'],...A.mip.map(m=>[m,`MIP ${m} mm`])].map(([m,t])=>`<button type="button" data-mip="${m}" aria-pressed="${!m}">${t}</button>`).join('')}</div>`:''}
     <div class="seg" role="group" aria-label="Labels"><button type="button" data-lab="all" aria-pressed="true">All labels</button><button type="button" data-lab="hover" aria-pressed="false">Hover only</button></div>
     <button type="button" class="btn" id="an-quiz" aria-pressed="false">Quiz me</button>
     <button type="button" class="btn an-max" id="an-max" aria-pressed="false" title="Expand the viewer (F)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg><span>Expand</span></button>
@@ -1210,7 +1224,7 @@ function anatomyView(id){
     const n=[st.D.Z,st.D.H,st.D.W][P.fix];rng.max=n-1;
     load();resize();draw();
   }
-  function load(){const ser=A.series&&A.series[st.ser];SL=anatSlice(st.D,P,cur(),ser?st.D.vols[ser.key]:null);off.width=hl.width=SL.C;off.height=hl.height=SL.R}
+  function load(){const ser=A.series&&A.series[st.ser];SL=anatSlice(st.D,P,cur(),ser?st.D.vols[ser.key]:null,st.mip?Math.round(st.mip/2/st.D.meta.spacing[P.fix]):0);off.width=hl.width=SL.C;off.height=hl.height=SL.R}
   function buildCats(){
     const D=st.D,used=new Set(D.meta.structures.map(s=>s.cat));
     $('#an-cats').innerHTML=Object.entries(D.meta.cats).filter(([k])=>used.has(k)).map(([k,c])=>`<button type="button" data-cat="${k}" aria-pressed="${st.cats.has(k)}"><i style="background:${c.color}"></i>${c.name}</button>`).join('');
@@ -1255,7 +1269,7 @@ function anatomyView(id){
     const D=st.D,R=SL.R,C=SL.C,L=SL.lab,mm2=SL.mmR*SL.mmC,acc={};
     for(let y=0;y<R;y++)for(let x=0;x<C;x++){const l=L[y*C+x];if(!l)continue;const a=acc[l]||(acc[l]={n:0,sx:0,sy:0});a.n++;a.sx+=x;a.sy+=y}
     const out=[];
-    for(const k in acc){const s=D.S[k];if(!s||acc[k].n*mm2<13)continue;const a=acc[k];let cx=a.sx/a.n,cy=a.sy/a.n;
+    for(const k in acc){const s=D.S[k];if(!s||acc[k].n*mm2<Math.min(13,A.minMM||13))continue;const a=acc[k];let cx=a.sx/a.n,cy=a.sy/a.n;
       let best=1e9,bx=cx,by=cy;const rad=Math.ceil(Math.sqrt(a.n))+4;
       for(let y=Math.max(0,Math.floor(cy-rad));y<Math.min(R,cy+rad);y++)for(let x=Math.max(0,Math.floor(cx-rad));x<Math.min(C,cx+rad);x++){if(L[y*C+x]==k){const d=((x-cx)*SL.mmC)**2+((y-cy)*SL.mmR)**2;if(d<best){best=d;bx=x;by=y}}}
       out.push({s,n:a.n,mm:a.n*mm2,x:bx+.5,y:by+.5})}
@@ -1305,7 +1319,7 @@ function anatomyView(id){
     ctx.font=`600 ${fs}px Manrope, system-ui, sans-serif`;ctx.textBaseline='middle';
     const wrap=t=>{if(ctx.measureText(t).width<=maxTw)return [t];const ws=t.split(' ');let a='',lines=[];for(const x of ws){const tr=a?a+' '+x:x;if(ctx.measureText(tr).width>maxTw&&a){lines.push(a);a=x}else a=tr}lines.push(a);return lines.slice(0,3)};
     const cx=ox+dw/2,cols={L:[],R:[]};
-    for(const it of items){if(it.mm<40)continue;const px=ox+it.x*sx,py=oy+it.y*sy,lines=wrap(it.s.name);cols[px<cx?'L':'R'].push({it,px,py,lines,hh:lines.length*lh})}
+    for(const it of items){if(it.mm<(A.minMM||40))continue;const px=ox+it.x*sx,py=oy+it.y*sy,lines=wrap(it.s.name);cols[px<cx?'L':'R'].push({it,px,py,lines,hh:lines.length*lh})}
     for(const side of ['L','R']){
       let c=cols[side];
       // keep the largest structures when a column cannot hold every name
@@ -1330,7 +1344,7 @@ function anatomyView(id){
     ctx.font=`600 ${fs}px Manrope, system-ui, sans-serif`;ctx.textBaseline='middle';
     const W=cv.width/geo.dpr,H=cv.height/geo.dpr;
     for(const it of items){
-      if(it.mm<40)continue;
+      if(it.mm<(A.minMM||40))continue;
       const px=ox+it.x*sx,py=oy+it.y*sy,tw=ctx.measureText(it.s.name).width+14;
       const cands=[[14,-th/2],[-14-tw,-th/2],[-tw/2,-th-12],[-tw/2,12],[18,-th-6],[-18-tw,-th-6],[18,6],[-18-tw,6],[26,-th*1.6],[-26-tw,-th*1.6],[26,th*0.8],[-26-tw,th*0.8]];
       let ok=null;
@@ -1411,6 +1425,7 @@ function anatomyView(id){
   v.querySelector('.anat-bar').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b||!st.D)return;
     if(b.dataset.plane!==undefined)setPlane(+b.dataset.plane);
     else if(b.dataset.ser!==undefined)setSer(+b.dataset.ser);
+    else if(b.dataset.mip!==undefined){st.mip=+b.dataset.mip;v.querySelectorAll('[data-mip]').forEach(x=>x.setAttribute('aria-pressed',x===b));load();draw()}
     else if(b.dataset.win)setWin(+b.dataset.win);else if(b.dataset.lab)setLabels(b.dataset.lab);else if(b.id==='an-quiz')toggleQuiz();else if(b.id==='an-max')setMax(!st.max)});
   $('#an-cats').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;const k=b.dataset.cat;st.cats.has(k)?st.cats.delete(k):st.cats.add(k);b.setAttribute('aria-pressed',st.cats.has(k));if(st.sel&&!st.cats.has(st.D.S[st.sel].cat))st.sel=0;draw()});
   const list=$('#an-list');
@@ -1432,7 +1447,7 @@ function anatomyView(id){
   }
   function nextQ(move){
     const D=st.D,n=[D.Z,D.H,D.W][P.fix];
-    const pool=()=>sliceStructs().filter(it=>st.cats.has(it.s.cat)&&it.mm>=135);
+    const pool=()=>sliceStructs().filter(it=>st.cats.has(it.s.cat)&&it.mm>=(A.minMM?A.minMM*3:135));
     if(move){for(let t=0;t<40;t++){st.pos[P.fix]=Math.floor(n*0.08+Math.random()*n*0.84);load();if(pool().length>=4)break}}
     let p=pool();if(p.length<2){st.quiz=null;$('#an-qz').hidden=false;$('#an-qz').innerHTML='<p>Not enough labelled structures here. Scroll to another slice and press Quiz me again.</p>';$('#an-quiz').setAttribute('aria-pressed','false');$('#an-quiz').textContent='Quiz me';draw();return}
     const target=p[Math.floor(Math.random()*p.length)].s;
