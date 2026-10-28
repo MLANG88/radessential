@@ -1086,9 +1086,11 @@ async function anatLoad(id,onProgress){
   await Promise.all([worker(),worker(),worker(),worker()]);
 
   const S={};meta.structures.forEach(s=>S[s.id]=s);
-  const area=new Uint32Array(256*Z);
-  for(let z=0;z<Z;z++){const off=z*H*W;for(let i=0;i<H*W;i++){const l=lab[off+i];if(l)area[l*Z+z]++}}
-  meta.structures.forEach(s=>{let b=0,bz=0;for(let z=0;z<Z;z++){const a=area[s.id*Z+z];if(a>b){b=a;bz=z}}s.best=bz;s.maxArea=b});
+  // per-label voxel counts along each axis (for best slice in every plane)
+  const area=new Uint32Array(256*Z),a1=new Uint32Array(256*H),a2=new Uint32Array(256*W);
+  for(let z=0,i=0;z<Z;z++)for(let y=0;y<H;y++)for(let x=0;x<W;x++,i++){const l=lab[i];if(l){area[l*Z+z]++;a1[l*H+y]++;a2[l*W+x]++}}
+  const bestOf=(arr,n,id)=>{let b=0,bz=0;for(let k=0;k<n;k++){const a=arr[id*n+k];if(a>b){b=a;bz=k}}return [bz,b]};
+  meta.structures.forEach(s=>{const [b0,m0]=bestOf(area,Z,s.id);s.best=b0;s.maxArea=m0;s.bestP=[b0,bestOf(a1,H,s.id)[0],bestOf(a2,W,s.id)[0]]});
   const verts=meta.structures.filter(s=>/^(C|T|L|S)\d+ vertebra$/.test(s.name));
   const level=new Array(Z).fill('');
   if(meta.scroll!=='sagittal')for(let z=0;z<Z;z++){let b=0;verts.forEach(v=>{const a=area[v.id*Z+z];if(a>b){b=a;level[z]=v.name.split(' ')[0]}})}
@@ -1096,8 +1098,26 @@ async function anatLoad(id,onProgress){
   const scout=new Uint8Array(Z*W);
   for(let z=0;z<Z;z++)for(let x=0;x<W;x++){let m=0,sum=0,n=0;for(let y=midY-half;y<=midY+half;y++){const v=ct[z*H*W+y*W+x];if(v>m)m=v;sum+=v;n++}scout[(Z-1-z)*W+x]=mr?Math.round(sum/n):m}
   const lut=new Float32Array(meta.lut);
-  const mm2=(meta.spacing[1]||1.5)*(meta.spacing[2]||1.5);
-  return ANAT_CACHE[id]={meta,ct,lab,S,area,level,scout,lut,Z,H,W,mm2};
+  return ANAT_CACHE[id]={meta,ct,lab,S,area,level,scout,lut,Z,H,W};
+}
+// viewing planes: fix = volume axis held constant (0 z, 1 row, 2 col); r/c = [axis, flip] for image rows/cols
+function anatPlanes(scroll){
+  return scroll==='sagittal'
+    ?[{k:'sag',name:'Sagittal',fix:0,r:[1,0],c:[2,0]}]   // thick sagittal sections: reformats would be too coarse to read
+    :[{k:'ax',name:'Axial',fix:0,r:[1,0],c:[2,0]},{k:'cor',name:'Coronal',fix:1,r:[0,1],c:[2,0]},{k:'sag',name:'Sagittal',fix:2,r:[0,1],c:[1,0]}];
+}
+function anatCentre(D,fix){
+  const n=[D.Z,D.H,D.W][fix];let sum=0,cnt=0;
+  if(fix===2){for(let z=0;z<D.Z;z+=4)for(let y=0;y<D.H;y+=4)for(let x=0;x<D.W;x+=2){if(D.lab[(z*D.H+y)*D.W+x]){sum+=x;cnt++}}}
+  else{for(let z=0;z<D.Z;z+=4)for(let y=0;y<D.H;y+=2)for(let x=0;x<D.W;x+=4){if(D.lab[(z*D.H+y)*D.W+x]){sum+=y;cnt++}}}
+  return cnt?Math.round(sum/cnt):Math.floor(n/2);
+}
+function anatSlice(D,p,idx){
+  const dims=[D.Z,D.H,D.W],str=[D.H*D.W,D.W,1],sp=D.meta.spacing;
+  const R=dims[p.r[0]],C=dims[p.c[0]],img=new Uint8Array(R*C),lab=new Uint8Array(R*C);
+  const base=idx*str[p.fix],sr=str[p.r[0]],sc=str[p.c[0]];
+  for(let r=0;r<R;r++){const rr=p.r[1]?R-1-r:r;for(let c=0;c<C;c++){const cc=p.c[1]?C-1-c:c;const i=base+rr*sr+cc*sc;img[r*C+c]=D.ct[i];lab[r*C+c]=D.lab[i]}}
+  return {img,lab,R,C,mmR:sp[p.r[0]],mmC:sp[p.c[0]],n:dims[p.fix]};
 }
 // crisp outline of one label on one slice (marching squares through pixel centres)
 const anatRank=n=>{const m=/^(C|T|L|S)(\d+)/.exec(n);return m?'CTLS'.indexOf(m[1])*100+(+m[2]):null};
@@ -1127,122 +1147,160 @@ function anatomyView(id){
   v.innerHTML=`<div class="wrap wide anat">
   <header class="ebanner"${IMGV(A.img)}><div class="crumb"><a href="#">Index</a> / <a href="#anatomy">Atlas</a></div>
   <div class="ehead"><h1>${A.title}</h1></div><div class="meta"><span class="tag v">Interactive atlas</span><span class="tag">${A.sub}</span></div></header>
+  <div class="an-shell">
   <div class="anat-bar">
+    <div class="seg" role="group" aria-label="Plane" id="an-planes"></div>
     <div class="seg" role="group" aria-label="Window">${A.presets.map((p,i)=>`<button type="button" data-win="${i}" aria-pressed="${i===0}">${p[0]}</button>`).join('')}</div>
     <div class="seg" role="group" aria-label="Labels"><button type="button" data-lab="all" aria-pressed="true">All labels</button><button type="button" data-lab="hover" aria-pressed="false">Hover only</button></div>
     <button type="button" class="btn" id="an-quiz" aria-pressed="false">Quiz me</button>
+    <button type="button" class="btn an-max" id="an-max" aria-pressed="false" title="Expand the viewer (F)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg><span>Expand</span></button>
     <div class="an-search"><input id="an-q" type="search" placeholder="Find a structure…" autocomplete="off" aria-label="Find a structure"><div class="an-res" id="an-res" hidden></div></div>
   </div>
   <div class="anat-grid">
-    <div class="an-stage" id="an-stage" tabindex="0" aria-label="CT viewer. Scroll or use arrow keys to change slice">
+    <div class="an-stage" id="an-stage" tabindex="0" aria-label="Image viewer. Scroll or use arrow keys to change slice">
       <canvas id="an-cv"></canvas>
       <div class="an-hud"><span id="an-pos">Loading…</span><span id="an-lvl"></span></div>
+      <div class="an-ori" id="an-ori"></div>
       <div class="an-tip" id="an-tip" hidden></div>
-      <div class="an-load" id="an-load"><div class="an-prog"><i id="an-pbar"></i></div><span id="an-ptxt">Loading CT…</span></div>
+      <div class="an-load" id="an-load"><div class="an-prog"><i id="an-pbar"></i></div><span id="an-ptxt">Loading scan…</span></div>
       <div class="an-quiz" id="an-qz" hidden></div>
     </div>
     <aside class="an-side">
-      <div class="an-scoutwrap"><canvas id="an-scout"></canvas><div class="an-scap">Coronal scout · drag to move</div></div>
+      <div class="an-scoutwrap"><canvas id="an-scout"></canvas><div class="an-scap" id="an-scap"></div></div>
       <input type="range" id="an-range" min="0" max="1" value="0" aria-label="Slice">
       <div class="an-cats" id="an-cats"></div>
       <div class="an-listh"><span>On this slice</span><span id="an-cnt"></span></div>
       <div class="an-list" id="an-list"></div>
     </aside>
   </div>
-  <p class="foot">${A.credit} Scroll with the mouse wheel, arrow keys or a vertical drag. Keys: L labels, Q quiz, 1–4 windows.</p>
+  </div>
+  <p class="foot">${A.credit} Scroll with the mouse wheel, arrow keys or a vertical drag. Keys: A/C/S planes, F expand, L labels, Q quiz, 1–4 windows.</p>
   </div>`;
-  const st={id,A,z:0,win:0,labels:'all',hover:0,sel:0,quiz:null,cats:new Set(A.defCats),D:null,dragging:false,score:[0,0]};
+  const st={id,A,pi:0,pos:[0,0,0],win:0,labels:'all',hover:0,sel:0,quiz:null,cats:new Set(A.defCats),D:null,score:[0,0],max:false};
   ANAT=st;
   const $=s=>v.querySelector(s);
-  const cv=$('#an-cv'),ctx=cv.getContext('2d'),stage=$('#an-stage'),tip=$('#an-tip'),sc=$('#an-scout'),rng=$('#an-range');
+  const root=$('.anat'),cv=$('#an-cv'),ctx=cv.getContext('2d'),stage=$('#an-stage'),tip=$('#an-tip'),sc=$('#an-scout'),rng=$('#an-range');
   const off=document.createElement('canvas'),octx=off.getContext('2d');
   const hl=document.createElement('canvas'),hctx=hl.getContext('2d');
-  let geo={s:1,ox:0,oy:0};
+  let geo={sx:1,sy:1,ox:0,oy:0,dpr:1},P=null,SL=null;
   const hex=c=>[parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)];
+  const cur=()=>st.pos[P.fix];
 
   anatLoad(id,(l,f)=>{$('#an-ptxt').textContent=`${l}… ${Math.round(f*100)}%`;$('#an-pbar').style.width=Math.round(f*100)+'%'}).then(D=>{
     if(ANAT!==st)return;
-    st.D=D;const s0=D.meta.structures.find(s=>s.name===A.start);st.z=s0?s0.best:Math.floor(D.Z/2);
-    off.width=hl.width=D.W;off.height=hl.height=D.H;
-    rng.max=D.Z-1;
+    st.D=D;st.planes=anatPlanes(D.meta.scroll);
+    const s0=D.meta.structures.find(s=>s.name===A.start);
+    st.pos=s0?s0.bestP.slice():[Math.floor(D.Z/2),Math.floor(D.H/2),Math.floor(D.W/2)];
+    $('#an-planes').hidden=st.planes.length<2;
+    $('#an-planes').innerHTML=st.planes.map((p,i)=>`<button type="button" data-plane="${i}" aria-pressed="${i===0}">${p.name}</button>`).join('');
     $('#an-load').hidden=true;
-    if(D.meta.scroll==='sagittal')v.querySelector('.an-scap').textContent='Axial scout · drag to move';
-    buildCats();resize();drawScout();draw();
+    buildCats();setPlane(0);
   }).catch(e=>{$('#an-ptxt').textContent='The atlas could not be loaded. Reload the page to try again.';console.error(e)});
 
+  function setPlane(i){
+    st.pi=i;P=st.planes[i];
+    st.seen=st.seen||{};
+    if(!st.seen[P.k]&&!st.jumped&&P.fix>0){const c=anatCentre(st.D,P.fix);if(c>=0)st.pos[P.fix]=c}
+    st.seen[P.k]=1;
+    v.querySelectorAll('[data-plane]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.plane===i));
+    const n=[st.D.Z,st.D.H,st.D.W][P.fix];rng.max=n-1;
+    load();resize();draw();
+  }
+  function load(){SL=anatSlice(st.D,P,cur());off.width=hl.width=SL.C;off.height=hl.height=SL.R}
   function buildCats(){
     const D=st.D,used=new Set(D.meta.structures.map(s=>s.cat));
     $('#an-cats').innerHTML=Object.entries(D.meta.cats).filter(([k])=>used.has(k)).map(([k,c])=>`<button type="button" data-cat="${k}" aria-pressed="${st.cats.has(k)}"><i style="background:${c.color}"></i>${c.name}</button>`).join('');
   }
   function resize(){
-    const D=st.D;if(!D)return;
-    const r=stage.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
-    const w=r.width,h=Math.min(r.width*D.H/D.W,window.innerHeight*0.78);
+    const D=st.D;if(!D||!SL)return;
+    const dpr=window.devicePixelRatio||1,r=stage.getBoundingClientRect(),w=r.width;
+    const mmW=SL.C*SL.mmC,mmH=SL.R*SL.mmR;
+    const maxH=st.max?Math.max(240,window.innerHeight-r.top-14):window.innerHeight*0.8;
+    const h=st.max?maxH:Math.min(w*mmH/mmW,maxH);
     stage.style.height=h+'px';
     cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);cv.style.width=w+'px';cv.style.height=h+'px';
-    const s=Math.min(w/D.W,h/D.H);geo={s,ox:(w-D.W*s)/2,oy:(h-D.H*s)/2,dpr};
-    const sr=sc.parentNode.getBoundingClientRect();sc.width=D.W;sc.height=D.Z*(D.meta.spacing[0]/D.meta.spacing[2]);
-    sc.style.width='100%';
+    const k=Math.min(w/mmW,h/mmH);
+    geo={sx:SL.mmC*k,sy:SL.mmR*k,ox:(w-mmW*k)/2,oy:(h-mmH*k)/2,dpr};
     drawScout();
   }
+  // reference image: native plane shows the coronal (or axial) projection; other planes show the native slice with a line
   function drawScout(){
-    const D=st.D;if(!D)return;const g=sc.getContext('2d');
-    const tmp=document.createElement('canvas');tmp.width=D.W;tmp.height=D.Z;const tg=tmp.getContext('2d');const im=tg.createImageData(D.W,D.Z);
+    const D=st.D;if(!D||!P)return;const g=sc.getContext('2d');const sp=D.meta.spacing;
     const [,W,L]=st.A.presets[0];const lo=L-W/2;
-    for(let i=0;i<D.W*D.Z;i++){const hu=D.lut[D.scout[i]];const g8=Math.max(0,Math.min(255,(hu-lo)/W*255));im.data[i*4]=im.data[i*4+1]=im.data[i*4+2]=g8;im.data[i*4+3]=255}
-    tg.putImageData(im,0,0);g.imageSmoothingEnabled=true;g.drawImage(tmp,0,0,sc.width,sc.height);
-    const y=(D.Z-1-st.z)/D.Z*sc.height;g.strokeStyle='#3cc6da';g.lineWidth=Math.max(1,sc.height/180);g.beginPath();g.moveTo(0,y);g.lineTo(sc.width,y);g.stroke();
+    let w,h,src,mmw,mmh;
+    if(P.fix===0){w=D.W;h=D.Z;src=D.scout;mmw=sp[2];mmh=sp[0]}
+    else{w=D.W;h=D.H;src=D.ct.subarray(st.pos[0]*D.H*D.W,(st.pos[0]+1)*D.H*D.W);mmw=sp[2];mmh=sp[1]}
+    const tmp=document.createElement('canvas');tmp.width=w;tmp.height=h;const tg=tmp.getContext('2d');const im=tg.createImageData(w,h);
+    for(let i=0;i<w*h;i++){const hu=D.lut[src[i]];const g8=Math.max(0,Math.min(255,(hu-lo)/W*255));im.data[i*4]=im.data[i*4+1]=im.data[i*4+2]=g8;im.data[i*4+3]=255}
+    tg.putImageData(im,0,0);
+    sc.width=600;sc.height=Math.round(600*(h*mmh)/(w*mmw));
+    g.imageSmoothingEnabled=true;g.drawImage(tmp,0,0,sc.width,sc.height);
+    g.strokeStyle='#3cc6da';g.lineWidth=2;g.beginPath();
+    if(P.fix===0){const y=(D.Z-1-st.pos[0]+.5)/D.Z*sc.height;g.moveTo(0,y);g.lineTo(sc.width,y)}
+    else if(P.fix===1){const y=(st.pos[1]+.5)/D.H*sc.height;g.moveTo(0,y);g.lineTo(sc.width,y)}
+    else{const x=(st.pos[2]+.5)/D.W*sc.width;g.moveTo(x,0);g.lineTo(x,sc.height)}
+    g.stroke();
+    const other=st.planes.find(p=>p.fix===(P.fix===0?1:0));
+    $('#an-scap').textContent=`${P.fix===0?(D.meta.scroll==='sagittal'?'Axial':'Coronal'):st.planes[0].name} reference · drag to move`;
+    sc.style.cursor=P.fix===2?'ew-resize':'ns-resize';
   }
   function sliceStructs(){
-    const D=st.D,z=st.z,off0=z*D.H*D.W,acc={};
-    for(let y=0;y<D.H;y++)for(let x=0;x<D.W;x++){const l=D.lab[off0+y*D.W+x];if(!l)continue;const a=acc[l]||(acc[l]={n:0,sx:0,sy:0});a.n++;a.sx+=x;a.sy+=y}
+    const D=st.D,R=SL.R,C=SL.C,L=SL.lab,mm2=SL.mmR*SL.mmC,acc={};
+    for(let y=0;y<R;y++)for(let x=0;x<C;x++){const l=L[y*C+x];if(!l)continue;const a=acc[l]||(acc[l]={n:0,sx:0,sy:0});a.n++;a.sx+=x;a.sy+=y}
     const out=[];
-    for(const k in acc){const s=D.S[k];if(!s||acc[k].n*D.mm2<13)continue;const a=acc[k];let cx=a.sx/a.n,cy=a.sy/a.n;
-      // nearest point inside the mask to its centroid
-      let best=1e9,bx=cx,by=cy;const r=Math.ceil(Math.sqrt(a.n))+4;
-      for(let y=Math.max(0,Math.floor(cy-r));y<Math.min(D.H,cy+r);y++)for(let x=Math.max(0,Math.floor(cx-r));x<Math.min(D.W,cx+r);x++){if(D.lab[off0+y*D.W+x]==k){const d=(x-cx)**2+(y-cy)**2;if(d<best){best=d;bx=x;by=y}}}
-      out.push({s,n:a.n,x:bx+.5,y:by+.5})}
+    for(const k in acc){const s=D.S[k];if(!s||acc[k].n*mm2<13)continue;const a=acc[k];let cx=a.sx/a.n,cy=a.sy/a.n;
+      let best=1e9,bx=cx,by=cy;const rad=Math.ceil(Math.sqrt(a.n))+4;
+      for(let y=Math.max(0,Math.floor(cy-rad));y<Math.min(R,cy+rad);y++)for(let x=Math.max(0,Math.floor(cx-rad));x<Math.min(C,cx+rad);x++){if(L[y*C+x]==k){const d=((x-cx)*SL.mmC)**2+((y-cy)*SL.mmR)**2;if(d<best){best=d;bx=x;by=y}}}
+      out.push({s,n:a.n,mm:a.n*mm2,x:bx+.5,y:by+.5})}
     return out.sort((a,b)=>b.n-a.n);
   }
   function draw(){
-    const D=st.D;if(!D)return;
-    const z=st.z,[,W,L]=st.A.presets[st.win],lo=L-W/2,img=octx.createImageData(D.W,D.H),o=z*D.H*D.W;
+    const D=st.D;if(!D||!SL)return;
+    const [,W,L]=st.A.presets[st.win],lo=L-W/2,N=SL.R*SL.C,img=octx.createImageData(SL.C,SL.R);
     const g=new Uint8ClampedArray(256);for(let i=0;i<256;i++)g[i]=(D.lut[i]-lo)/W*255;
-    for(let i=0;i<D.W*D.H;i++){const v=g[D.ct[o+i]];img.data[i*4]=img.data[i*4+1]=img.data[i*4+2]=v;img.data[i*4+3]=255}
+    for(let i=0;i<N;i++){const val=g[SL.img[i]];img.data[i*4]=img.data[i*4+1]=img.data[i*4+2]=val;img.data[i*4+3]=255}
     octx.putImageData(img,0,0);
-    const {s,ox,oy,dpr}=geo;
+    const {sx,sy,ox,oy,dpr}=geo,dw=SL.C*sx,dh=SL.R*sy;
     ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#000';ctx.fillRect(0,0,cv.width,cv.height);
-    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(off,ox,oy,D.W*s,D.H*s);
-    // highlight
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(off,ox,oy,dw,dh);
     const q=st.quiz,focus=q?q.target.id:(st.hover||st.sel);
     if(focus>0&&D.S[focus]){
-      const s0=D.S[focus],c=hex(D.meta.cats[s0.cat].color),hm=hctx.createImageData(D.W,D.H);let any=false;
-      for(let i=0;i<D.W*D.H;i++){if(D.lab[o+i]!=focus)continue;any=true;hm.data[i*4]=c[0];hm.data[i*4+1]=c[1];hm.data[i*4+2]=c[2];hm.data[i*4+3]=80}
+      const s0=D.S[focus],c=hex(D.meta.cats[s0.cat].color),hm=hctx.createImageData(SL.C,SL.R);let any=false;
+      for(let i=0;i<N;i++){if(SL.lab[i]!=focus)continue;any=true;hm.data[i*4]=c[0];hm.data[i*4+1]=c[1];hm.data[i*4+2]=c[2];hm.data[i*4+3]=80}
       if(any){
-        hctx.putImageData(hm,0,0);ctx.imageSmoothingEnabled=true;ctx.drawImage(hl,ox,oy,D.W*s,D.H*s);
-        const segs=anatContour(D.lab,o,D.W,D.H,focus);
-        ctx.beginPath();for(let i=0;i<segs.length;i+=2){ctx.moveTo(ox+segs[i][0]*s,oy+segs[i][1]*s);ctx.lineTo(ox+segs[i+1][0]*s,oy+segs[i+1][1]*s)}
+        hctx.putImageData(hm,0,0);ctx.drawImage(hl,ox,oy,dw,dh);
+        const segs=anatContour(SL.lab,0,SL.C,SL.R,focus);
+        ctx.beginPath();for(let i=0;i<segs.length;i+=2){ctx.moveTo(ox+segs[i][0]*sx,oy+segs[i][1]*sy);ctx.lineTo(ox+segs[i+1][0]*sx,oy+segs[i+1][1]*sy)}
         ctx.lineCap='round';ctx.strokeStyle='rgba(0,0,0,.55)';ctx.lineWidth=3.2;ctx.stroke();
         ctx.strokeStyle=D.meta.cats[s0.cat].color;ctx.lineWidth=1.7;ctx.stroke();
       }
     }
-    // labels
     const items=sliceStructs().filter(it=>st.cats.has(it.s.cat));
     st.items=items;
     if(!q&&st.labels==='all')drawLabels(items);
-    $('#an-pos').textContent=`Slice ${D.Z-z} of ${D.Z}`;
-    $('#an-lvl').textContent=D.level[z]?`Level ${D.level[z]}`:'';
-    rng.value=D.Z-1-z;
+    const n=[D.Z,D.H,D.W][P.fix],i=cur();
+    $('#an-pos').textContent=`${P.name} · ${P.fix===0?n-i:i+1} of ${n}`;
+    $('#an-lvl').textContent=P.fix===0&&D.level[i]?`Level ${D.level[i]}`:'';
+    $('#an-ori').innerHTML=orient();
+    rng.value=P.fix===0?n-1-i:i;
     renderList(items);drawScout();
   }
+  function orient(){
+    if(st.D.meta.scroll==='sagittal'&&P.k==='ax')return '<b class="t">A</b><b class="b">P</b>';
+    if(st.D.meta.scroll==='sagittal'&&P.k==='cor')return '<b class="t">S</b><b class="b">I</b>';
+    if(P.k==='ax')return '<b class="l">R</b><b class="r">L</b><b class="t">A</b><b class="b">P</b>';
+    if(P.k==='cor')return '<b class="l">R</b><b class="r">L</b><b class="t">S</b><b class="b">I</b>';
+    return '<b class="l">A</b><b class="r">P</b><b class="t">S</b><b class="b">I</b>';
+  }
   function drawLabels(items){
-    const {s,ox,oy}=geo,D=st.D,placed=[];
-    ctx.font='600 11.5px Manrope, system-ui, sans-serif';ctx.textBaseline='middle';
+    const {sx,sy,ox,oy}=geo,D=st.D,placed=[];
+    const fs=st.max?13:11.5,th=st.max?21:19;
+    ctx.font=`600 ${fs}px Manrope, system-ui, sans-serif`;ctx.textBaseline='middle';
     const W=cv.width/geo.dpr,H=cv.height/geo.dpr;
     for(const it of items){
-      if(it.n*D.mm2<40)continue;
-      const px=ox+it.x*s,py=oy+it.y*s,tw=ctx.measureText(it.s.name).width+14,th=19;
-      const cands=[[14,-th/2],[-14-tw,-th/2],[-tw/2,-th-12],[-tw/2,12],[18,-th-6],[-18-tw,-th-6],[18,6],[-18-tw,6]];
+      if(it.mm<40)continue;
+      const px=ox+it.x*sx,py=oy+it.y*sy,tw=ctx.measureText(it.s.name).width+14;
+      const cands=[[14,-th/2],[-14-tw,-th/2],[-tw/2,-th-12],[-tw/2,12],[18,-th-6],[-18-tw,-th-6],[18,6],[-18-tw,6],[26,-th*1.6],[-26-tw,-th*1.6],[26,th*0.8],[-26-tw,th*0.8]];
       let ok=null;
       for(const [dx,dy] of cands){const r={x:px+dx,y:py+dy,w:tw,h:th};if(r.x<2||r.y<2||r.x+r.w>W-2||r.y+r.h>H-2)continue;
         if(placed.every(p=>r.x>p.x+p.w+2||r.x+r.w<p.x-2||r.y>p.y+p.h+2||r.y+r.h<p.y-2)){ok=r;break}}
@@ -1263,19 +1321,20 @@ function anatomyView(id){
     $('#an-cnt').textContent=items.length;
     box.innerHTML=Object.keys(D.meta.cats).filter(k=>by[k]).map(k=>`<div class="an-grp"><div class="an-gh"><i style="background:${D.meta.cats[k].color}"></i>${D.meta.cats[k].name}</div>${by[k].sort(anatCmp).map(s=>`<button type="button" data-s="${s.id}" class="${s.id===st.sel?'on':''}">${s.name}</button>`).join('')}</div>`).join('')||'<p class="an-empty">No structures from the selected groups on this slice.</p>';
   }
-  function setZ(z){const D=st.D;if(!D)return;z=Math.max(0,Math.min(D.Z-1,z));if(z!==st.z){st.z=z;draw()}}
+  function setIdx(i){const D=st.D;if(!D)return;const n=[D.Z,D.H,D.W][P.fix];i=Math.max(0,Math.min(n-1,i));if(i!==cur()){st.pos[P.fix]=i;load();draw()}}
+  const step=d=>setIdx(cur()+(P.fix===0?-d:d));   // d>0 = scroll down: inferior / posterior / leftward
   function pick(ev){
-    const D=st.D;if(!D)return 0;const r=cv.getBoundingClientRect(),{s,ox,oy}=geo;
-    const x=Math.floor((ev.clientX-r.left-ox)/s),y=Math.floor((ev.clientY-r.top-oy)/s);
-    if(x<0||y<0||x>=D.W||y>=D.H)return 0;const l=D.lab[st.z*D.H*D.W+y*D.W+x];return l&&D.S[l]&&st.cats.has(D.S[l].cat)?l:0;
+    if(!SL)return 0;const r=cv.getBoundingClientRect(),{sx,sy,ox,oy}=geo;
+    const x=Math.floor((ev.clientX-r.left-ox)/sx),y=Math.floor((ev.clientY-r.top-oy)/sy);
+    if(x<0||y<0||x>=SL.C||y>=SL.R)return 0;const l=SL.lab[y*SL.C+x],D=st.D;return l&&D.S[l]&&st.cats.has(D.S[l].cat)?l:0;
   }
   // ---- interaction
-  stage.addEventListener('wheel',ev=>{if(!st.D)return;ev.preventDefault();st.acc=(st.acc||0)+ev.deltaY;const step=Math.trunc(st.acc/40);if(step){st.acc-=step*40;setZ(st.z-step)}},{passive:false});
-  let dragY=null,dragZ=0,moved=false;
-  stage.addEventListener('pointerdown',ev=>{if(!st.D)return;dragY=ev.clientY;dragZ=st.z;moved=false;stage.setPointerCapture(ev.pointerId)});
+  stage.addEventListener('wheel',ev=>{if(!st.D)return;ev.preventDefault();st.acc=(st.acc||0)+ev.deltaY;const k=Math.trunc(st.acc/40);if(k){st.acc-=k*40;step(k)}},{passive:false});
+  let dragY=null,dragI=0,moved=false;
+  stage.addEventListener('pointerdown',ev=>{if(!st.D)return;dragY=ev.clientY;dragI=cur();moved=false;stage.setPointerCapture(ev.pointerId)});
   stage.addEventListener('pointermove',ev=>{
     if(!st.D)return;
-    if(dragY!==null&&(ev.buttons||ev.pointerType==='touch')){const dz=Math.round((dragY-ev.clientY)/4);if(Math.abs(dragY-ev.clientY)>4)moved=true;if(moved){setZ(dragZ+dz);tip.hidden=true;return}}
+    if(dragY!==null&&(ev.buttons||ev.pointerType==='touch')){const d=Math.round((ev.clientY-dragY)/4);if(Math.abs(dragY-ev.clientY)>4)moved=true;if(moved){setIdx(dragI+(P.fix===0?-d:d));tip.hidden=true;return}}
     if(st.quiz)return;
     const l=pick(ev);
     if(l!==st.hover){st.hover=l;draw()}
@@ -1285,38 +1344,49 @@ function anatomyView(id){
     if(st.quiz&&st.quiz.mode==='find'){quizClick(pick(ev));return}
     const l=pick(ev);st.sel=l===st.sel?0:l;draw()});
   stage.addEventListener('pointerleave',()=>{tip.hidden=true;if(st.hover){st.hover=0;draw()}});
+  function setMax(on){
+    st.max=on;root.classList.toggle('max',on);document.body.classList.toggle('an-maxed',on);
+    const b=$('#an-max');b.setAttribute('aria-pressed',on);b.querySelector('span').textContent=on?'Close':'Expand';
+    requestAnimationFrame(()=>{resize();draw()});
+  }
   const onKey=ev=>{
     if(ANAT!==st||!st.D)return;if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
     const k=ev.key;
-    if(k==='ArrowUp'||k==='ArrowLeft'){setZ(st.z+1);ev.preventDefault()}
-    else if(k==='ArrowDown'||k==='ArrowRight'){setZ(st.z-1);ev.preventDefault()}
-    else if(k==='PageUp'){setZ(st.z+10);ev.preventDefault()}else if(k==='PageDown'){setZ(st.z-10);ev.preventDefault()}
+    if(k==='ArrowUp'||k==='ArrowLeft'){step(-1);ev.preventDefault()}
+    else if(k==='ArrowDown'||k==='ArrowRight'){step(1);ev.preventDefault()}
+    else if(k==='PageUp'){step(-10);ev.preventDefault()}else if(k==='PageDown'){step(10);ev.preventDefault()}
+    else if(k==='Escape'&&st.max)setMax(false);
+    else if(k==='f'||k==='F')setMax(!st.max);
+    else if(/^[acsACS]$/.test(k)){const want={a:'ax',c:'cor',s:'sag'}[k.toLowerCase()];const i=st.planes.findIndex(p=>p.k===want);if(i>=0&&i!==st.pi)setPlane(i)}
     else if(k==='l'||k==='L')setLabels(st.labels==='all'?'hover':'all');
     else if(k==='q'||k==='Q')toggleQuiz();
     else if(/^[1-4]$/.test(k)&&st.A.presets[+k-1])setWin(+k-1);
   };
   document.addEventListener('keydown',onKey);
   const onResize=()=>{if(ANAT===st){resize();draw()}};window.addEventListener('resize',onResize);
-  st.destroy=()=>{document.removeEventListener('keydown',onKey);window.removeEventListener('resize',onResize)};
-  rng.addEventListener('input',()=>setZ(st.D.Z-1-(+rng.value)));
-  let scDrag=false;const scMove=ev=>{const r=sc.getBoundingClientRect();setZ(st.D.Z-1-Math.floor((ev.clientY-r.top)/r.height*st.D.Z))};
+  st.destroy=()=>{document.removeEventListener('keydown',onKey);window.removeEventListener('resize',onResize);document.body.classList.remove('an-maxed')};
+  rng.addEventListener('input',()=>{const n=+rng.max+1;setIdx(P.fix===0?n-1-(+rng.value):+rng.value)});
+  let scDrag=false;
+  const scMove=ev=>{const D=st.D,r=sc.getBoundingClientRect(),fy=(ev.clientY-r.top)/r.height,fx=(ev.clientX-r.left)/r.width;
+    if(P.fix===0)setIdx(D.Z-1-Math.floor(fy*D.Z));else if(P.fix===1)setIdx(Math.floor(fy*D.H));else setIdx(Math.floor(fx*D.W))};
   sc.addEventListener('pointerdown',ev=>{if(!st.D)return;scDrag=true;sc.setPointerCapture(ev.pointerId);scMove(ev)});
   sc.addEventListener('pointermove',ev=>{if(scDrag)scMove(ev)});sc.addEventListener('pointerup',()=>scDrag=false);
   function setWin(i){st.win=i;v.querySelectorAll('[data-win]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.win===i));draw()}
   function setLabels(m){st.labels=m;v.querySelectorAll('[data-lab]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lab===m));draw()}
-  v.querySelector('.anat-bar').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;
-    if(b.dataset.win)setWin(+b.dataset.win);else if(b.dataset.lab)setLabels(b.dataset.lab);else if(b.id==='an-quiz')toggleQuiz()});
+  v.querySelector('.anat-bar').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b||!st.D)return;
+    if(b.dataset.plane!==undefined)setPlane(+b.dataset.plane);
+    else if(b.dataset.win)setWin(+b.dataset.win);else if(b.dataset.lab)setLabels(b.dataset.lab);else if(b.id==='an-quiz')toggleQuiz();else if(b.id==='an-max')setMax(!st.max)});
   $('#an-cats').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;const k=b.dataset.cat;st.cats.has(k)?st.cats.delete(k):st.cats.add(k);b.setAttribute('aria-pressed',st.cats.has(k));if(st.sel&&!st.cats.has(st.D.S[st.sel].cat))st.sel=0;draw()});
   const list=$('#an-list');
   list.addEventListener('mouseover',ev=>{const b=ev.target.closest('[data-s]');const l=b?+b.dataset.s:0;if(l!==st.hover){st.hover=l;draw()}});
   list.addEventListener('mouseleave',()=>{if(st.hover){st.hover=0;draw()}});
   list.addEventListener('click',ev=>{const b=ev.target.closest('[data-s]');if(!b)return;const l=+b.dataset.s;st.sel=st.sel===l?0:l;draw()});
-  // search
+  // search: jump to the best slice in the current plane
   const qi=$('#an-q'),qr=$('#an-res');
   qi.addEventListener('input',()=>{const D=st.D;if(!D)return;const t=qi.value.trim().toLowerCase();if(!t){qr.hidden=true;return}
     const hits=D.meta.structures.filter(s=>s.name.toLowerCase().includes(t)).slice(0,8);
     qr.hidden=false;qr.innerHTML=hits.length?hits.map(s=>`<button type="button" data-go="${s.id}"><i style="background:${D.meta.cats[s.cat].color}"></i>${s.name}</button>`).join(''):'<div class="an-empty">No match in this scan.</div>'});
-  qr.addEventListener('click',ev=>{const b=ev.target.closest('[data-go]');if(!b)return;const s=st.D.S[+b.dataset.go];st.cats.add(s.cat);buildCats();st.sel=s.id;st.z=s.best;qi.value='';qr.hidden=true;draw();stage.focus()});
+  qr.addEventListener('click',ev=>{const b=ev.target.closest('[data-go]');if(!b)return;const s=st.D.S[+b.dataset.go];st.cats.add(s.cat);buildCats();st.sel=s.id;st.pos=s.bestP.slice();st.jumped=1;qi.value='';qr.hidden=true;load();draw();stage.focus()});
   qi.addEventListener('keydown',ev=>{if(ev.key==='Enter'){const b=qr.querySelector('[data-go]');if(b)b.click()}else if(ev.key==='Escape'){qi.value='';qr.hidden=true}});
   // ---- quiz
   function toggleQuiz(){
@@ -1325,9 +1395,9 @@ function anatomyView(id){
     b.setAttribute('aria-pressed','true');b.textContent='End quiz';st.score=[0,0];st.sel=0;st.hover=0;tip.hidden=true;nextQ(false);
   }
   function nextQ(move){
-    const D=st.D;
-    const pool=()=>sliceStructs().filter(it=>st.cats.has(it.s.cat)&&it.n*D.mm2>=135);
-    if(move){for(let t=0;t<40;t++){const z=Math.floor(D.Z*0.06+Math.random()*D.Z*0.88);st.z=z;if(pool().length>=4)break}}
+    const D=st.D,n=[D.Z,D.H,D.W][P.fix];
+    const pool=()=>sliceStructs().filter(it=>st.cats.has(it.s.cat)&&it.mm>=135);
+    if(move){for(let t=0;t<40;t++){st.pos[P.fix]=Math.floor(n*0.08+Math.random()*n*0.84);load();if(pool().length>=4)break}}
     let p=pool();if(p.length<2){st.quiz=null;$('#an-qz').hidden=false;$('#an-qz').innerHTML='<p>Not enough labelled structures here. Scroll to another slice and press Quiz me again.</p>';$('#an-quiz').setAttribute('aria-pressed','false');$('#an-quiz').textContent='Quiz me';draw();return}
     const target=p[Math.floor(Math.random()*p.length)].s;
     const mode=Math.random()<0.5?'name':'find';

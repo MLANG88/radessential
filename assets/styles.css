@@ -319,6 +319,24 @@ a.btn.pri{color:var(--bg)}
 .an-grp button:hover{background:var(--sunk)}
 .an-grp button.on{background:var(--accent-soft);color:var(--accent);font-weight:700}
 .an-empty{color:var(--muted);font-size:13px;margin:4px 0}
+.an-shell{display:flex;flex-direction:column}
+.an-max svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;margin-right:6px}
+.an-ori b{position:absolute;font:700 12px var(--f-mono);color:rgba(207,227,234,.7);pointer-events:none;text-shadow:0 1px 2px #000}
+.an-ori .l{left:10px;top:50%;transform:translateY(-50%)}.an-ori .r{right:10px;top:50%;transform:translateY(-50%)}
+.an-ori .t{top:30px;left:50%;transform:translateX(-50%)}.an-ori .b{bottom:8px;left:50%;transform:translateX(-50%)}
+.anat.max .an-shell{position:fixed;inset:0;z-index:400;background:#071016;padding:12px 16px 14px;overflow:hidden}
+.anat.max .anat-bar .seg button,.anat.max .anat-bar .btn{background:#0f1d26;color:#cfe3ea;border-color:#22394a}
+.anat.max .anat-bar [aria-pressed="true"]{background:var(--accent);color:#fff}
+.anat.max .an-search input{background:#0f1d26;color:#e8f1f4;border-color:#22394a}
+.anat.max .anat-grid{flex:1;min-height:0;grid-template-columns:minmax(0,1fr) 300px;align-items:stretch}
+.anat.max .an-stage{border-radius:12px;box-shadow:none}
+.anat.max .an-side{overflow:auto;min-height:0;align-content:start;color:#cfe3ea;padding-right:2px}
+.anat.max .an-list{max-height:none}
+.anat.max .an-grp button{color:#d7e6ec}.anat.max .an-grp button:hover{background:#13232e}
+.anat.max .an-cats button{background:#0f1d26;border-color:#22394a;color:#9fb6c0}.anat.max .an-cats button[aria-pressed="true"]{color:#e8f1f4;border-color:var(--accent);background:#0d2b33}
+body.an-maxed{overflow:hidden}
+@media (max-width:900px){.anat.max .anat-grid{grid-template-columns:1fr}.anat.max .an-side{display:none}}
+
 @media (max-width:900px){.anat-grid{grid-template-columns:1fr}.an-scoutwrap{display:none}.an-list{max-height:none}}
 
 /* aspects grid */
