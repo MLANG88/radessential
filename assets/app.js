@@ -802,11 +802,11 @@ function renderNav(){
   let h=`<a class="home${!cur&&!NAV.caseSec&&!NAV.anat?' cur':''}" href="#">Index</a><div class="navtools"><button type="button" id="expAll">Expand all</button><button type="button" id="colAll">Collapse all</button></div>`;
   h+=`<details class="grp atlas-grp" data-sec="anatomy"${openSecs.includes('anatomy')?' open':''}><summary><span>Atlas</span><span class="cnt">${ATLAS.length}</span>${chev}</summary><div class="items">${ATLAS.map(a=>`<a href="#anatomy-${a.id}" class="${NAV.anat===a.id?'cur':''}">${a.title}</a>`).join('')}</div></details>`;
   if(pins.length)h+=grp('pinned','Pinned',pins.filter(id=>byId[id]).map(id=>byId[id]),e=>e.id===cur);
-  SECTIONS.forEach(s=>{const list=s.id==='calc'?[...inSec('calc'),...CALC_LINKS.map(i=>byId[i])]:inSec(s.id);h+=grp(s.id,s.name,list,e=>e.id===cur&&s.id===e.sec)});
+  {const list=[...inSec('calc'),...CALC_LINKS.map(i=>byId[i])];h+=grp('calc','Calculators',list,e=>e.id===cur&&e.sec==='calc').replace('class="grp"','class="grp calc-grp"')}
+  h+=`<div class="navh">Body regions</div>`;
+  SECTIONS.filter(s=>s.id!=='calc').forEach(s=>{h+=grp(s.id,s.name,inSec(s.id),e=>e.id===cur&&s.id===e.sec)});
   const n=casesState==='ready'?CASES.length:'';
-  h+=`<details class="grp cases-grp" data-sec="cases"${openSecs.includes('cases')?' open':''}><summary><span>Cases</span><span class="cnt">${n}</span>${chev}</summary><div class="items">
-    <a href="#cases" class="${NAV.caseSec==='all'?'cur':''}">All cases</a>
-    ${CASE_SECS.map(s=>`<a href="#cases-${s.id}" class="${NAV.caseSec===s.id?'cur':''}">${s.name}${casesState==='ready'?`<span class="ncount">${casesIn(s.id).length}</span>`:''}</a>`).join('')}</div></details>`;
+  h+=`<a class="cases-link${NAV.caseSec?' cur':''}" href="#cases"><span>Cases</span><span class="soon">Coming soon</span></a>`;
   nav.innerHTML=h;
   nav.querySelectorAll('details.grp').forEach(d=>d.addEventListener('toggle',()=>{const id=d.dataset.sec;openSecs=d.open?[...new Set([...openSecs,id])]:openSecs.filter(x=>x!==id);store.set('open',openSecs)}));
   const setAll=o=>nav.querySelectorAll('details.grp').forEach(d=>d.open=o);
@@ -842,8 +842,7 @@ function home(){
   <section class="sec">${COVER('Calculators',E.filter(e=>e.init).length,null)}<ul>${E.filter(e=>e.init).map(e=>`<li><a href="#${e.id}">${e.title}<small>${secName(e.sec)}</small></a></li>`).join('')}</ul></section></div>
   <div class="sechead"><h2>Atlas</h2><a href="#anatomy">All atlases →</a></div>
   <div class="anat-cards">${ATLAS.map(a=>`<a class="csec" href="#anatomy-${a.id}">${COVER(a.title,'',a.img)}<span class="anat-sub">${a.sub}</span></a>`).join('')}</div>
-  <div class="sechead"><h2>Cases</h2><a href="#cases">All cases →</a></div>
-  <div class="csecs">${CASE_SECS.map(s=>`<a class="csec" href="#cases-${s.id}">${COVER(s.name,casesState==='ready'?casesIn(s.id).length:'',CASE_IMG[s.id])}</a>`).join('')}</div>
+  <div class="sechead"><h2>Cases</h2><span class="soon-t">Coming soon</span></div>
   ${footer()}</div>`;
 }
 function footer(){return `<p class="foot">Radessential summarizes published classification systems for practicing radiologists. Summaries are condensed; confirm details against the cited source before relying on them for patient care.</p>`}
@@ -883,6 +882,13 @@ function caseCard(c){
   const img=c.images&&c.images[0];
   return `<a class="ccard" href="#case-${esc(c.id)}"><div class="cthumb">${img?`<img src="${imgSrc(img)}" alt="" loading="lazy">`:'<span>No images</span>'}</div>
   <div class="cbody"><b>${esc(c.title)}</b><div class="cmeta">${(c.modality||[]).map(m=>`<span class="tag">${esc(m)}</span>`).join('')}${c.images&&c.images.length>1?`<span class="tag">${c.images.length} images</span>`:''}</div></div></a>`;
+}
+function casesSoon(){
+  V().innerHTML=`<div class="wrap">
+  <header class="ebanner"${IMGV('brain')}><div class="crumb"><a href="#">Index</a> / Cases</div>
+  <div class="ehead"><h1>Cases</h1></div></header>
+  <div class="soonbox"><h2>Coming soon</h2><p>Teaching cases with images, findings and discussion are on the way.</p></div>
+  </div>`;
 }
 function casesHome(){
   V().innerHTML=`<div class="wrap">
@@ -1488,8 +1494,7 @@ function render(h){
   if(h==='anatomy'){NAV.anat='home';anatomyHome()}
   else if(h.startsWith('anatomy-')&&ATLAS_BY[h.slice(8)]){NAV.anat=h.slice(8);anatomyView(h.slice(8))}
   else if(byId[h]){NAV.entry=h;entry(byId[h])}
-  else if(h==='cases'){NAV.caseSec='all';casesHome()}
-  else if(h.startsWith('cases-')&&CASE_SEC[h.slice(6)]){NAV.caseSec=h.slice(6);caseList(h.slice(6))}
+  else if(h==='cases'||(h.startsWith('cases-')&&CASE_SEC[h.slice(6)])){NAV.caseSec='all';casesSoon()}
   else if(h.startsWith('case-new-')&&CASE_SEC[h.slice(9)]){NAV.caseSec=h.slice(9);caseForm(null,h.slice(9))}
   else if(h.startsWith('case-edit-')){const c=findCase(h.slice(10));NAV.caseSec=c?c.sec:'all';caseForm(h.slice(10))}
   else if(h.startsWith('case-')){const c=findCase(h.slice(5));NAV.caseSec=c?c.sec:'all';caseView(h.slice(5))}
