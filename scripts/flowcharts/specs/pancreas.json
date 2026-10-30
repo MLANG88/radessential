@@ -1,0 +1,18 @@
+{"leafRow":true,"gap":20,
+"tree":{"t":"Incidental pancreatic cyst (asymptomatic adult)","k":"title","c":[
+  {"t":"&lt; 1.5 cm","c":[
+    {"t":"Age &lt; 65","c":[{"t":"Imaging yearly × 5,<br>then every 2 yr × 2<br>Stop if stable<br>at 9 yr","k":"orange","w":180}]},
+    {"t":"Age 65–79","c":[{"t":"Imaging every<br>2 yr × 5<br>Stop if stable<br>at 10 yr","k":"orange","w":160}]}]},
+  {"t":"1.5–2.5 cm","c":[
+    {"t":"Communicates with<br>MPD (BD-IPMN)","w":200,"c":[
+      {"t":"1.5–1.9 cm","c":[{"t":"Yearly × 5, then<br>every 2 yr × 2<br>Stop if stable at 9 yr","k":"orange","w":180}]},
+      {"t":"2.0–2.5 cm","c":[{"t":"Every 6 mo × 4,<br>yearly × 2, every<br>2 yr × 3. Stop if<br>stable at 10 yr","k":"orange","w":170}]}]},
+    {"t":"No MPD communication<br>or indeterminate","w":200,"c":[{"t":"Every 6 mo × 4,<br>yearly × 2, every<br>2 yr × 3, or EUS-FNA","k":"orange","w":180}]}]},
+  {"t":"&gt; 2.5 cm","c":[
+    {"t":"Serous<br>cystadenoma","c":[{"t":"Surgical consult<br>if &gt; 4 cm","k":"blue","w":160}]},
+    {"t":"Low risk<br>by imaging","c":[{"t":"Every 6 mo × 4,<br>yearly × 2, every<br>2 yr × 3. Stop if<br>stable at 10 yr","k":"orange","w":170}]},
+    {"t":"High risk<br>by imaging*","c":[{"t":"EUS-FNA and<br>surgical<br>consultation","k":"red","w":150}]}]},
+  {"t":"Age ≥ 80 at<br>detection","c":[
+    {"t":"≤ 2.5 cm or<br>&gt; 2.5 cm low risk","w":170,"c":[{"t":"Imaging every<br>2 yr × 2; stop if<br>stable or not a<br>surgical candidate","k":"orange","w":170}]}]}]},
+"note":"Growth (any chart): ≥ 100% (&lt; 5 mm), ≥ 50% (5–14 mm), ≥ 20% (≥ 15 mm) in long axis → re-enter the next size chart, or EUS-FNA. Imaging is contrast-enhanced MRI or pancreas-protocol CT. Stop at age 80.<br>* Mural nodule, wall thickening, MPD ≥ 7 mm, peripheral calcification, or biliary obstruction prompt EUS-FNA and surgical evaluation at any size. EUS-FNA can replace imaging at any point.",
+"cite":"Megibow AJ et al. Management of Incidental Pancreatic Cysts: A White Paper of the ACR Incidental Findings Committee. J Am Coll Radiol. 2017;14(7):911-923."}

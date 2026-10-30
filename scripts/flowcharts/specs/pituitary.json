@@ -1,0 +1,13 @@
+{"leafRow":true,"gap":24,
+"tree":{"t":"Incidental pituitary lesion on CT or MRI","k":"title","c":[
+  {"t":"Simple cyst","c":[
+    {"t":"No mass effect<br>or invasion","c":[{"t":"No further<br>evaluation","k":"blue","w":150}]},
+    {"t":"Mass effect<br>or invasion*","c":[{"t":"Endocrine and/or<br>neurosurgical<br>referral","k":"red","w":170}]}]},
+  {"t":"Solid or mixed<br>solid-cystic†","c":[
+    {"t":"&lt; 5 mm‡","c":[{"t":"No further imaging<br>Correlate for<br>hypersecretion","k":"blue","w":170}]},
+    {"t":"5–10 mm","c":[{"t":"No further imaging<br>Correlate for<br>hypersecretion;<br>consider endocrine tests","k":"orange","w":200}]},
+    {"t":"&gt; 10 mm","c":[
+      {"t":"No mass effect<br>or invasion","c":[{"t":"Endocrine function<br>tests; pituitary MRI<br>in 6–12 months","k":"orange","w":180}]},
+      {"t":"Mass effect<br>or invasion*","c":[{"t":"Endocrine and/or<br>neurosurgical<br>referral","k":"red","w":170}]}]}]}]},
+"note":"Applies to asymptomatic adults imaged for an unrelated reason. * Optic chiasm or nerve, cavernous sinus. † Manage as solid if composition cannot be determined. ‡ Consider a pseudolesion; pseudolesions need no further management.<br>Incidental pituitary uptake on FDG PET: use the same pathway; if composition or size cannot be assessed, obtain a pituitary MRI.",
+"cite":"Hoang JK et al. Management of Incidental Pituitary Findings on CT, MRI, and 18F-Fluorodeoxyglucose PET: A White Paper of the ACR Incidental Findings Committee. J Am Coll Radiol. 2018;15(7):966-972."}

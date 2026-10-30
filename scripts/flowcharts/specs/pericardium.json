@@ -1,0 +1,8 @@
+{"leafRow":true,"gap":26,
+"tree":{"t":"Incidental, asymptomatic pericardial abnormality","k":"title","c":[
+  {"t":"Cyst ≤ 10 HU*","c":[{"t":"No further<br>work-up","k":"blue","w":150}]},
+  {"t":"Cyst &gt; 10 HU, thickened pericardium,<br>fluid &gt; 50 mL, or calcification","w":290,"c":[
+    {"t":"Explainable<br>disease†","c":[{"t":"Management depends<br>on the disease","k":"orange","w":180}]},
+    {"t":"No explainable<br>disease‡","c":[{"t":"Consider MRI or<br>short-term CT<br>follow-up","k":"red","w":170}]}]}]},
+"note":"Normal pericardium is 1–2 mm thick; &gt; 3–4 mm is abnormal. Up to 50 mL of fluid can be physiologic. * Benign, but may need resection if large and affecting cardiac function. † E.g. autoimmune disease, prior radiation or infection, renal disease, medications. ‡ Consider pericarditis, post-infarction, metabolic (hypothyroid, uraemic), autoimmune disease, sarcoidosis.",
+"cite":"Munden RF et al. Managing Incidental Findings on Thoracic CT: Mediastinal and Cardiovascular Findings. A White Paper of the ACR Incidental Findings Committee. J Am Coll Radiol. 2018;15(8):1087-1096."}

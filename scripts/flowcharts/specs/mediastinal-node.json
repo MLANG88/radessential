@@ -1,0 +1,11 @@
+{"leafRow":true,"gap":24,
+"tree":{"t":"Incidental, asymptomatic mediastinal lymph node","k":"title","c":[
+  {"t":"Short axis &lt; 15 mm, or<br>benign texture features","w":220,"c":[{"t":"No further<br>work-up","k":"blue","w":150}]},
+  {"t":"Short axis ≥ 15 mm","c":[
+    {"t":"Explainable<br>disease*","c":[{"t":"Management depends<br>on the disease","k":"orange","w":180}]},
+    {"t":"No explainable<br>disease†","c":[
+      {"t":"Clinical consultation and/or<br>PET/CT and/or chest CT in 3–6 mo","w":260,"c":[
+        {"t":"Increased","c":[{"t":"PET/CT<br>or biopsy","k":"red","w":140}]},
+        {"t":"Stable or<br>decreased","c":[{"t":"No further<br>work-up","k":"blue","w":140}]}]}]}]}]},
+"note":"Short-axis measurement is the standard; consider further action if there are many small nodes. * E.g. emphysema, interstitial lung disease, sarcoidosis, cardiac disease. † Consider lymphoma, undiagnosed metastatic disease (including testicular cancer in young men), and infection.",
+"cite":"Munden RF et al. Managing Incidental Findings on Thoracic CT: Mediastinal and Cardiovascular Findings. A White Paper of the ACR Incidental Findings Committee. J Am Coll Radiol. 2018;15(8):1087-1096."}

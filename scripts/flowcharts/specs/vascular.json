@@ -1,0 +1,17 @@
+{"leafRow":true,"gap":18,
+"tree":{"t":"Incidental abdominal aneurysm on CT or MRI","k":"title","c":[
+  {"t":"Abdominal aortic aneurysm<br>(maximal diameter)","w":250,"c":[
+    {"t":"2.5–2.9 cm","c":[{"t":"Imaging<br>in 5 yr","k":"orange","w":110}]},
+    {"t":"3.0–3.4 cm","c":[{"t":"Imaging<br>in 3 yr","k":"orange","w":110}]},
+    {"t":"3.5–3.9 cm","c":[{"t":"Imaging<br>in 2 yr","k":"orange","w":110}]},
+    {"t":"4.0–4.4 cm","c":[{"t":"Imaging<br>in 1 yr","k":"orange","w":110}]},
+    {"t":"4.5–4.9 cm","c":[{"t":"Imaging<br>in 6 mo","k":"red","w":110}]},
+    {"t":"5.0–5.5 cm","c":[{"t":"Imaging in<br>3–6 mo and<br>vascular<br>referral","k":"red","w":120}]}]},
+  {"t":"Common iliac<br>aneurysm","c":[
+    {"t":"3.0–3.5 cm","c":[{"t":"Imaging in<br>6 mo, then<br>yearly","k":"orange","w":120}]},
+    {"t":"&gt; 3.5 cm","c":[{"t":"Close<br>follow-up or<br>treatment","k":"red","w":120}]}]},
+  {"t":"Splenic, renal, or<br>other visceral<br>artery aneurysm","w":180,"c":[
+    {"t":"&lt; 2 cm","c":[{"t":"Imaging yearly<br>(renal 1–1.5 cm:<br>every 1–2 yr)","k":"orange","w":160}]},
+    {"t":"≥ 2 cm*","c":[{"t":"Endovascular or<br>surgical repair","k":"red","w":150}]}]}]},
+"note":"Intervals are for the first follow-up and can change with growth rate, comorbidity, and life expectancy. Consider earlier referral at any size for rapid growth or symptoms.<br>* Lower thresholds: renal artery aneurysm 1.5–2 cm (or ≥ 1 cm with uncontrolled hypertension); splenic artery aneurysm in women of childbearing age or cirrhosis; pancreaticoduodenal aneurysms at any size.",
+"cite":"Khosa F et al. Managing Incidental Findings on Abdominal and Pelvic CT and MRI, Part 2: White Paper of the ACR Incidental Findings Committee II on Vascular Findings. J Am Coll Radiol. 2013;10(10):789-794."}

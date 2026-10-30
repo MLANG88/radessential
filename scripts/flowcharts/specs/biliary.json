@@ -1,0 +1,12 @@
+{"leafRow":true,"gap":24,
+"tree":{"t":"Incidental gallbladder or biliary finding on CT or MRI","k":"title","c":[
+  {"t":"Gallbladder polyp","c":[
+    {"t":"≤ 6 mm","c":[{"t":"No follow-up","k":"blue","w":150}]},
+    {"t":"7–9 mm","c":[{"t":"Ultrasound yearly<br>Surgical consult<br>if it grows","k":"orange","w":170}]},
+    {"t":"≥ 10 mm<br>or mass","c":[{"t":"Surgical consult<br>(consider<br>cholecystectomy)","k":"red","w":170}]}]},
+  {"t":"Porcelain gallbladder<br>(no mass)","w":200,"c":[{"t":"No routine follow-up<br>Individualize to<br>comorbidity; use<br>contrast CT if followed","k":"blue","w":200}]},
+  {"t":"Dilated CBD*","c":[
+    {"t":"Bilirubin and<br>alkaline phosphatase<br>normal","w":190,"c":[{"t":"No further<br>imaging","k":"blue","w":150}]},
+    {"t":"Abnormal labs, or<br>suspected stone<br>or mass","w":180,"c":[{"t":"MRCP, EUS, or ERCP<br>(EUS-FNA for a distal<br>CBD mass)","k":"red","w":200}]}]}]},
+"note":"* Short-axis CBD or common hepatic duct &gt; 6 mm in a patient &lt; 60 years with the gallbladder present, or &gt; 10 mm after cholecystectomy; &gt; 7 mm suggests obstruction with the gallbladder in place. Mild dilation with normal labs needs no further imaging.",
+"cite":"Sebastian S et al. Managing Incidental Findings on Abdominal and Pelvic CT and MRI, Part 4: White Paper of the ACR Incidental Findings Committee II on Gallbladder and Biliary Findings. J Am Coll Radiol. 2013;10(12):953-956."}

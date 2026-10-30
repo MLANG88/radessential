@@ -746,6 +746,58 @@ ${N('Benign features: homogeneous, low attenuation (&lt;20 HU), no enhancement, 
 refs:[{c:'Heller MT, Harisinghani M, Neitlich JD, et al. Managing incidental findings on abdominal and pelvic CT and MRI, part 3: white paper of the ACR Incidental Findings Committee II on splenic and nodal findings. J Am Coll Radiol. 2013;10:833–839.',q:'Heller Harisinghani Neitlich managing incidental findings abdominal pelvic CT MRI part 3 splenic nodal'}],rp:'incidental splenic lesion'});
 
 /* ===== CALCULATORS ===== */
+add({id:'incidental-pancreas',sec:'incid',title:'Incidental pancreatic cyst',alias:'pancreatic cyst ipmn bd-ipmn branch duct incidental pancreas cyst worrisome features high risk stigmata eus fna surveillance megibow',ver:'ACR 2017',tags:['CT','MRI'],
+lede:'Asymptomatic adults. Presume mucinous unless imaging or aspiration shows otherwise. Size, age and main-duct communication set the surveillance chart.',
+body:`${FIGS(['fc-pancreas','Incidental pancreatic cyst (ACR 2017, Charts 1–4)'])}
+${T(['Finding','Management'],[
+ ['&lt; 1.5 cm, age &lt; 65','Imaging yearly × 5, then every 2 yr × 2; stop if stable at 9 yr'],
+ ['&lt; 1.5 cm, age 65–79','Imaging every 2 yr × 5; stop if stable at 10 yr'],
+ ['1.5–1.9 cm BD-IPMN','Yearly × 5, then every 2 yr × 2'],
+ ['2.0–2.5 cm BD-IPMN, or 1.5–2.5 cm indeterminate','Every 6 mo × 4, yearly × 2, every 2 yr × 3; or EUS-FNA'],
+ ['&gt; 2.5 cm, low risk','Every 6 mo × 4, then yearly × 2, every 2 yr × 3'],
+ ['&gt; 2.5 cm, high risk','EUS-FNA and surgical consultation'],
+ ['Serous cystadenoma','Surgical consult if &gt; 4 cm'],
+ ['Age ≥ 80 at detection','Every 2 yr × 2 if a surgical candidate; stop if stable']])}
+${T(['Worrisome feature','High-risk stigma'],[['Cyst ≥ 3 cm','Obstructive jaundice with a head cyst'],['Thick or enhancing wall','Enhancing solid component'],['Non-enhancing mural nodule','MPD ≥ 10 mm'],['MPD ≥ 7 mm','']])}
+${P(['Significant growth: ≥ 100% for cysts &lt; 5 mm, ≥ 50% for 5–14 mm, ≥ 20% for ≥ 15 mm (long axis).','Follow-up stops at age 80. Tiny “white dot” cysts: one stable study at 2 years is enough.','Imaging: contrast-enhanced MRI/MRCP or pancreas-protocol CT.'])}`,
+refs:[{c:'Megibow AJ, Baker ME, Morgan DE, et al. Management of incidental pancreatic cysts: a white paper of the ACR Incidental Findings Committee. J Am Coll Radiol. 2017;14:911–923.',q:'Megibow management of incidental pancreatic cysts white paper ACR'}],rp:'pancreatic cystic lesion'});
+add({id:'incidental-pituitary',sec:'incid',title:'Incidental pituitary lesion',alias:'pituitary incidentaloma microadenoma macroadenoma rathke cleft cyst incidental pituitary fdg pet uptake',ver:'ACR 2018',tags:['CT','MRI','PET'],
+lede:'Asymptomatic adults imaged for an unrelated reason. Report composition, size, and mass effect or invasion.',
+body:`${FIGS(['fc-pituitary','Incidental pituitary lesion on CT or MRI'])}
+${T(['Lesion','Management'],[
+ ['Simple cyst, no mass effect','No further evaluation (likely Rathke cleft cyst)'],
+ ['Solid/mixed &lt; 5 mm','No further imaging; correlate for hypersecretion; consider pseudolesion'],
+ ['Solid/mixed 5–10 mm','No further imaging; correlate; consider endocrine tests'],
+ ['Solid/mixed &gt; 10 mm, no mass effect','Endocrine function tests; pituitary MRI in 6–12 months'],
+ ['Any lesion with mass effect or invasion','Endocrine and/or neurosurgical referral']])}
+${P(['Indeterminate composition: manage as solid.','FDG PET uptake: same pathway; obtain a pituitary MRI if composition or size cannot be assessed. Consider life expectancy.'])}`,
+refs:[{c:'Hoang JK, Hoffman AR, González RG, et al. Management of incidental pituitary findings on CT, MRI, and 18F-fluorodeoxyglucose PET: a white paper of the ACR Incidental Findings Committee. J Am Coll Radiol. 2018;15:966–972.',q:'Hoang incidental pituitary findings white paper ACR'}],rp:'pituitary incidentaloma'});
+add({id:'incidental-biliary',sec:'incid',title:'Incidental gallbladder and biliary findings',alias:'gallbladder polyp porcelain gallbladder cbd dilation common bile duct dilated biliary dilatation incidental',ver:'ACR 2013',tags:['CT','MRI'],
+lede:'Gallbladder polyps by size, porcelain gallbladder, and common duct dilation on CT or MRI.',
+body:`${FIGS(['fc-biliary','Incidental gallbladder or biliary finding on CT or MRI'])}
+${T(['Finding','Management'],[
+ ['Polyp ≤ 6 mm','No evaluation or follow-up'],['Polyp 7–9 mm','Ultrasound yearly; surgical consult if it grows'],['Polyp ≥ 10 mm or mass','Surgical consult'],
+ ['Wall calcification, no mass','No routine follow-up; contrast CT if followed'],
+ ['CBD &gt; 6 mm (&lt; 60 yr, gallbladder in place) or &gt; 10 mm (post-cholecystectomy)','Check bilirubin and alkaline phosphatase; no imaging if normal; MRCP, EUS or ERCP if abnormal or stone or mass suspected']])}`,
+refs:[{c:'Sebastian S, Araujo C, Neitlich JD, Berland LL. Managing incidental findings on abdominal and pelvic CT and MRI, part 4: white paper of the ACR Incidental Findings Committee II on gallbladder and biliary findings. J Am Coll Radiol. 2013;10:953–956.',q:'Sebastian incidental gallbladder biliary findings white paper'}],rp:'gallbladder polyp'});
+add({id:'incidental-vascular',sec:'incid',title:'Incidental abdominal aneurysms',alias:'abdominal aortic aneurysm aaa follow-up interval iliac artery aneurysm splenic artery aneurysm renal artery aneurysm visceral aneurysm incidental vascular',ver:'ACR 2013',tags:['CT','MRI'],
+lede:'Initial follow-up intervals for incidental abdominal aortic, iliac and visceral artery aneurysms.',
+body:`${FIGS(['fc-vascular','Incidental abdominal aneurysm on CT or MRI'])}
+${T(['Aortic diameter','Initial follow-up imaging'],[['&lt; 2.5 cm','None'],['2.5–2.9 cm','5 years'],['3.0–3.4 cm','3 years'],['3.5–3.9 cm','2 years'],['4.0–4.4 cm','1 year'],['4.5–4.9 cm','6 months + consider referral'],['5.0–5.5 cm','3–6 months + consider referral']])}
+${T(['Aneurysm','Management'],[['Common iliac 3.0–3.5 cm','Imaging at ~6 months, then yearly'],['Common iliac &gt; 3.5 cm','Close follow-up or treatment'],['Splenic &lt; 2 cm','Yearly imaging'],['Splenic ≥ 2 cm','Consider endovascular treatment'],['Renal 1.0–1.5 cm','Imaging every 1–2 years'],['Renal &gt; 1.5–2.0 cm','Consider repair'],['Other visceral ≥ 2 cm, or pancreaticoduodenal','Consider treatment']])}
+${N('Intervals can change with growth rate, comorbidity and life expectancy. Current vascular surgery society guidelines may use different intervals.')}`,
+refs:[{c:'Khosa F, Krinsky G, Macari M, Yucel EK, Berland LL. Managing incidental findings on abdominal and pelvic CT and MRI, part 2: white paper of the ACR Incidental Findings Committee II on vascular findings. J Am Coll Radiol. 2013;10:789–794.',q:'Khosa incidental vascular findings white paper ACR'}],rp:'abdominal aortic aneurysm'});
+add({id:'incidental-mediastinal-node',sec:'incid',title:'Incidental mediastinal lymph node',alias:'mediastinal lymph node enlarged incidental lymphadenopathy chest ct 15 mm short axis',ver:'ACR 2018',tags:['CT'],
+lede:'Asymptomatic patient with an incidental mediastinal node on chest CT. Short axis 15 mm is the threshold.',
+body:`${FIGS(['fc-mediastinal-node','Incidental, asymptomatic mediastinal lymph node'])}
+${P(['&lt; 15 mm short axis or benign features: no further work-up.','≥ 15 mm with an explaining disease (emphysema, ILD, sarcoidosis, heart failure): manage the disease.','≥ 15 mm unexplained: clinical consultation, PET/CT or chest CT in 3–6 months; biopsy or PET/CT if enlarging.'])}`,
+refs:[{c:'Munden RF, Carter BW, Chiles C, et al. Managing incidental findings on thoracic CT: mediastinal and cardiovascular findings. A white paper of the ACR Incidental Findings Committee. J Am Coll Radiol. 2018;15:1087–1096.',q:'Munden incidental findings thoracic CT mediastinal cardiovascular'}],rp:'mediastinal lymph node enlargement'});
+add({id:'incidental-pericardium',sec:'incid',title:'Incidental pericardial findings',alias:'pericardial cyst pericardial effusion thickening calcification incidental chest ct',ver:'ACR 2018',tags:['CT'],
+lede:'Incidental pericardial cyst, effusion, thickening or calcification on chest CT.',
+body:`${FIGS(['fc-pericardium','Incidental, asymptomatic pericardial abnormality'])}
+${T(['Finding','Normal / threshold'],[['Pericardial thickness','1–2 mm normal; &gt; 3–4 mm abnormal'],['Pericardial fluid','Up to 50 mL can be physiologic'],['Cyst','≤ 10 HU: no work-up; &gt; 10 HU: as below']])}
+${P(['Cyst &gt; 10 HU, thickening, fluid &gt; 50 mL or calcification: look for an explaining disease; if none, consider MRI or short-term CT follow-up.'])}`,
+refs:[{c:'Munden RF, Carter BW, Chiles C, et al. Managing incidental findings on thoracic CT: mediastinal and cardiovascular findings. A white paper of the ACR Incidental Findings Committee. J Am Coll Radiol. 2018;15:1087–1096.',q:'Munden incidental findings thoracic CT mediastinal cardiovascular'}],rp:'pericardial cyst'});
 add({id:'ich-volume',sec:'calc',title:'ICH volume (ABC/2)',alias:'intracerebral hemorrhage hematoma volume abc/2 kothari',ver:'Kothari 1996',tags:['CT','Neuro'],
 lede:'Ellipsoid approximation of hematoma volume. A = largest diameter on the slice with largest hemorrhage; B = diameter perpendicular to A on the same slice; C = craniocaudal extent.',
 body:`<div class="calc" id="c-abc"><div class="calc-h">Volume</div><div class="row">
