@@ -1003,7 +1003,7 @@ function ddxView(){
   const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   // small, safe Markdown renderer: headings, lists, bold, italics, inline code, paragraphs
   const inl=t=>esc(t).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/(^|[^*])\*([^*\n]+?)\*/g,'$1<em>$2</em>').replace(/`([^`]+)`/g,'<code>$1</code>');
-  const md=src=>{const L=src.replace(/\r/g,'').split('\n');let h='',list=null;
+  const md=src=>{const L=src.replace(/<think>[\s\S]*?(<\/think>|$)/g,'').replace(/^\s*```(?:markdown)?\s*|```\s*$/g,'').replace(/\r/g,'').split('\n');let h='',list=null;
     const close=()=>{if(list){h+=`</${list}>`;list=null}};
     for(const raw of L){const l=raw.trimEnd();let m;
       if(!l.trim()){close();continue}
