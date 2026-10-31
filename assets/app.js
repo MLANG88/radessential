@@ -970,24 +970,15 @@ function caseCard(c){
 /* ---------- AI differential generator ---------- */
 function ddxView(){
   const v=V();
-  const MODS=['','CT','MRI','Radiograph','Ultrasound','PET/CT','Nuclear medicine','Fluoroscopy','Mammography','Angiography'];
-  const REGS=['','Brain','Head and neck','Spine','Chest','Cardiac','Abdomen','Pelvis','Musculoskeletal','Breast','Vascular','Pediatric'];
   v.innerHTML=`<div class="wrap">
   <header class="ebanner"${IMGV('brain')}><div class="crumb"><a href="#">Index</a> / Tools</div>
-  <div class="ehead"><h1>Differential generator</h1></div><div class="meta"><span class="tag v">AI assisted</span><span class="tag">Text or images</span></div></header>
-  <p class="lede">Describe the imaging findings, add an image if you like, and get a ranked differential with supporting and opposing features, do-not-miss diagnoses and next steps.</p>
+  <div class="ehead"><h1>Differential generator</h1></div><div class="meta"><span class="tag v">AI assisted</span><span class="tag">Free text, optional images</span></div></header>
+  <p class="lede">Describe the case in free text, optionally add up to four images, and get a ranked differential with supporting and opposing features, do-not-miss diagnoses and next steps.</p>
   <div class="ddx-warn"><b>Educational aid, not a diagnosis.</b> Output comes from an open AI model and can be wrong or incomplete. Verify against the images, the clinical picture and primary sources. Do not enter names, dates, record numbers or other identifiers, and upload only de-identified images.</div>
   <form class="ddx-form" id="ddx-form" autocomplete="off">
-    <div class="ddx-row">
-      <label class="fl"><span>Age</span><input id="dx-age" inputmode="numeric" maxlength="6" placeholder="e.g. 54"></label>
-      <label class="fl"><span>Sex</span><select id="dx-sex"><option value="">–</option><option>Female</option><option>Male</option></select></label>
-      <label class="fl"><span>Modality</span><select id="dx-mod">${MODS.map(m=>`<option value="${m}">${m||'–'}</option>`).join('')}</select></label>
-      <label class="fl"><span>Region</span><select id="dx-reg">${REGS.map(m=>`<option value="${m}">${m||'–'}</option>`).join('')}</select></label>
-    </div>
-    <label class="fl"><span>Clinical history <small>(optional)</small></span><input id="dx-hx" maxlength="600" placeholder="e.g. headache for 2 weeks, prior breast cancer"></label>
-    <label class="fl"><span>Imaging findings</span><textarea id="dx-find" rows="6" maxlength="4000" placeholder="e.g. 2.3 cm extra-axial dural-based mass along the left convexity, homogeneously enhancing, dural tail, adjacent hyperostosis, no restricted diffusion"></textarea></label>
+    <label class="fl"><span>Case description</span><textarea id="dx-find" rows="7" maxlength="4000" placeholder="Describe the patient and findings in your own words, e.g. 54-year-old woman with headaches. MRI: 2.3 cm extra-axial dural-based mass along the left convexity, homogeneous enhancement, dural tail, adjacent hyperostosis, no restricted diffusion."></textarea></label>
     <div class="ddx-drop" id="dx-drop" tabindex="0" role="button" aria-label="Add images"><input type="file" id="dx-file" accept="image/png,image/jpeg,image/webp" multiple hidden>
-      <b>Add up to 3 images</b><span>Drop, paste or click. Key images or screenshots work best; images are resized and stripped of file metadata before sending.</span></div>
+      <b>Optional: add up to 4 images</b><span>Drop, paste or click. Key images or screenshots work best; images are resized and stripped of file metadata before sending.</span></div>
     <div class="ddx-thumbs" id="dx-thumbs"></div>
     <label class="ddx-ok" id="dx-okwrap" hidden><input type="checkbox" id="dx-ok"> These images contain no patient names, dates, record numbers or other identifiers.</label>
     <div class="ddx-actions"><button type="submit" class="btn pri" id="dx-go">Generate differential</button><button type="button" class="btn" id="dx-clear">Clear</button><span class="ddx-status" id="dx-status"></span></div>
@@ -997,11 +988,11 @@ function ddxView(){
   const $=s=>v.querySelector(s),imgs=[];
   const drop=$('#dx-drop'),file=$('#dx-file');
   const thumbs=()=>{$('#dx-thumbs').innerHTML=imgs.map((u,i)=>`<figure><img src="${u}" alt="Uploaded image ${i+1}"><button type="button" data-rm="${i}" aria-label="Remove image ${i+1}">×</button></figure>`).join('');$('#dx-okwrap').hidden=!imgs.length};
-  const addFile=async f=>{if(!/^image\/(png|jpe?g|webp)$/.test(f.type)||imgs.length>=3)return;
+  const addFile=async f=>{if(!/^image\/(png|jpe?g|webp)$/.test(f.type)||imgs.length>=4)return;
     const bmp=await createImageBitmap(f);const k=Math.min(1,1024/Math.max(bmp.width,bmp.height));
     const c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
     imgs.push(c.toDataURL('image/jpeg',0.86));thumbs()};
-  const addFiles=async fl=>{for(const f of fl)await addFile(f)};
+  const addFiles=async fl=>{for(const f of [...fl])await addFile(f)};
   drop.onclick=()=>file.click();drop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();file.click()}};
   file.onchange=()=>{addFiles(file.files);file.value=''};
   drop.ondragover=e=>{e.preventDefault();drop.classList.add('on')};drop.ondragleave=()=>drop.classList.remove('on');
@@ -1018,7 +1009,7 @@ function ddxView(){
     if(imgs.length&&!$('#dx-ok').checked){st.textContent='Confirm the images are de-identified.';return}
     const btn=$('#dx-go');btn.disabled=true;st.textContent='Thinking… this can take 10–30 seconds.';out.innerHTML='';
     try{
-      const r=await fetch('/api/ddx',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({findings,images:imgs,context:{age:$('#dx-age').value.trim(),sex:$('#dx-sex').value,modality:$('#dx-mod').value,region:$('#dx-reg').value,history:$('#dx-hx').value.trim()}})});
+      const r=await fetch('/api/ddx',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({findings,images:imgs})});
       const ct=r.headers.get('content-type')||'';
       if(!ct.includes('json'))throw new Error(r.status===404||r.status===405?'offline':'bad');
       const d=await r.json();

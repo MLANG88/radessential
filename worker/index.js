@@ -1,15 +1,16 @@
 // RadEssential worker: serves the static site and the /api/ddx differential-diagnosis endpoint.
 // The model runs on Cloudflare Workers AI (free daily allocation on the Workers Free plan); no API key is stored anywhere.
 
-const MODELS = ['@cf/meta/llama-4-scout-17b-16e-instruct', '@cf/google/gemma-3-12b-it'];
+// Primary: Google Gemma 4 26B (vision). Fallbacks if it is unavailable or rejects the request.
+const MODELS = ['@cf/google/gemma-4-26b-a4b-it', '@cf/google/gemma-3-12b-it', '@cf/meta/llama-4-scout-17b-16e-instruct'];
 const MAX_TEXT = 4000;
-const MAX_IMAGES = 3;
+const MAX_IMAGES = 4;
 const MAX_IMAGE_BYTES = 1_500_000; // per image, as base64 data URL length
 
 const SYSTEM = `You are a board-certified radiologist helping another radiologist build a differential diagnosis.
 Work only from the findings and images provided. Do not invent findings that were not described or are not visible.
 If images are provided, first describe what you can actually see (modality, plane, sequence or phase if identifiable, location, key features), and say plainly when image quality, a single slice, or missing context limits interpretation.
-Rank diagnoses by likelihood given the stated age, sex, history and imaging features. Always include critical "do not miss" diagnoses when they are plausible.
+Rank diagnoses by likelihood given any age, sex, history and imaging features in the text. Always include critical "do not miss" diagnoses when they are plausible.
 Use standard radiology terminology. Be concise. Never give treatment advice; recommend imaging or work-up steps only.
 Respond with JSON only, no markdown, matching exactly this shape:
 {"image_description": string (empty if no image),
@@ -48,14 +49,7 @@ async function ddx(request, env) {
   }
   if (!findings && !images.length) return json({ error: 'Describe the findings or add an image.' }, 400);
 
-  const clinical = [
-    ctx.age && `Age: ${String(ctx.age).slice(0, 10)}`,
-    ctx.sex && `Sex: ${String(ctx.sex).slice(0, 10)}`,
-    ctx.modality && `Modality: ${String(ctx.modality).slice(0, 40)}`,
-    ctx.region && `Body region: ${String(ctx.region).slice(0, 40)}`,
-    ctx.history && `Clinical history: ${String(ctx.history).slice(0, 600)}`,
-  ].filter(Boolean).join('\n');
-  const userText = `${clinical ? clinical + '\n\n' : ''}Imaging findings: ${findings || '(none typed; interpret the attached image' + (images.length > 1 ? 's' : '') + ')'}`;
+  const userText = findings ? `Case and imaging findings:\n${findings}` : `No text was given; interpret the attached image${images.length > 1 ? 's' : ''}.`;
   const content = images.length
     ? [{ type: 'text', text: userText }, ...images.map(url => ({ type: 'image_url', image_url: { url } }))]
     : userText;
