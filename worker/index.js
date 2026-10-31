@@ -46,17 +46,38 @@ async function ddx(request, env) {
     : userText;
   const messages = [{ role: 'system', content: SYSTEM }, { role: 'user', content }];
 
-  let lastErr;
+  // Non-streaming call with server-side checks: reasoning models (Gemma 4) can spend the token budget on hidden
+  // "thinking" and return no visible text, so an empty answer falls through to the next model.
+  const pick = out => {
+    if (!out) return '';
+    if (typeof out === 'string') return out;
+    const c = out.choices?.[0]?.message?.content ?? out.choices?.[0]?.text;
+    const v = out.response ?? out.result?.response ?? (Array.isArray(c) ? c.map(x => x.text || '').join('') : c);
+    return typeof v === 'string' ? v : (v ? JSON.stringify(v) : '');
+  };
+  const clean = t => t.replace(/<think>[\s\S]*?(<\/think>|$)/g, '').trim();
+  const attempts = [];
   for (const model of MODELS) {
-    try {
-      const stream = await env.AI.run(model, { messages, max_tokens: 1400, temperature: 0.3, stream: true });
-      if (!stream || typeof stream.getReader !== 'function') throw new Error('No stream');
-      return new Response(stream, { headers: { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', 'x-model': model } });
-    } catch (e) { lastErr = e; }
+    const variants = model.includes('gemma-4')
+      ? [{ chat_template_kwargs: { enable_thinking: false } }, { reasoning_effort: 'low' }, {}]
+      : [{}];
+    for (const extra of variants) {
+      try {
+        const out = await env.AI.run(model, { messages, max_tokens: 2048, temperature: 0.3, ...extra });
+        const text = clean(pick(out));
+        if (text) {
+          const sse = `data: ${JSON.stringify({ response: text })}\n\ndata: [DONE]\n\n`;
+          return new Response(sse, { headers: { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', 'x-model': model } });
+        }
+        attempts.push(`${model}${Object.keys(extra).length ? ' ' + Object.keys(extra)[0] : ''}: empty (keys ${Object.keys(out || {}).join(',')})`);
+      } catch (e) {
+        attempts.push(`${model}${Object.keys(extra).length ? ' ' + Object.keys(extra)[0] : ''}: ${String(e && e.message || e).slice(0, 120)}`);
+      }
+    }
   }
-  const msg = String(lastErr && lastErr.message || lastErr);
-  const quota = /quota|limit|neuron|429|capacity/i.test(msg);
-  return json({ error: quota ? 'The free AI allowance for today has been used. Please try again later.' : 'The AI service could not answer. Please try again.', detail: msg.slice(0, 300) }, quota ? 429 : 502);
+  const detail = attempts.join(' | ');
+  const quota = /quota|neuron|429|daily/i.test(detail);
+  return json({ error: quota ? 'The free AI allowance for today has been used. Please try again later.' : 'The AI service could not answer. Please try again.', detail: detail.slice(0, 900) }, quota ? 429 : 502);
 }
 
 export default {

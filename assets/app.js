@@ -1025,7 +1025,7 @@ function ddxView(){
     try{
       const r=await fetch('/api/ddx',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({findings,images:imgs})});
       const ct=r.headers.get('content-type')||'';
-      if(ct.includes('json')){const d=await r.json();throw new Error(d.error||'Something went wrong.')}
+      if(ct.includes('json')){const d=await r.json();if(d.detail)console.warn('ddx detail:',d.detail);throw new Error((d.error||'Something went wrong.')+(d.detail?' ('+d.detail.slice(0,240)+')':''))}
       if(!ct.includes('event-stream'))throw new Error(r.status===404||r.status===405?'offline':'Could not reach the AI service. Please try again.');
       const model=(r.headers.get('x-model')||'').replace('@cf/','');
       const rd=r.body.getReader(),dec=new TextDecoder();let buf='',raf=0;
@@ -1034,7 +1034,7 @@ function ddxView(){
       while(!fin){const {done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});
         let i;while((i=buf.indexOf('\n'))>=0){const line=buf.slice(0,i).trim();buf=buf.slice(i+1);
           if(!line.startsWith('data:'))continue;const p=line.slice(5).trim();if(p==='[DONE]'){fin=true;break}if(!p)continue;
-          try{const j=JSON.parse(p);const t=j.response??j.choices?.[0]?.delta?.content??j.choices?.[0]?.text??'';if(t){text+=t;if(!raf)raf=requestAnimationFrame(paint)}}catch{}}}
+          try{const j=JSON.parse(p);const t=j.response??j.choices?.[0]?.delta?.content??j.choices?.[0]?.text??'';if(t){for(let k=0;k<t.length;k+=18){text+=t.slice(k,k+18);paint();await new Promise(r=>setTimeout(r,12))}}}catch{}}}
       if(fin)rd.cancel().catch(()=>{});
       if(raf)cancelAnimationFrame(raf);raf=0;
       if(!text.trim())throw new Error('The model returned an empty answer. Please try again.');
