@@ -1023,6 +1023,24 @@ function ddxView(){
       if(list&&/^\s{2,}\S/.test(raw)){h=h.replace(/<\/li>$/,' '+inl(l.trim())+'</li>');continue}
       close();h+=`<p>${inl(l)}</p>`}
     close();return h};
+  // Example images and Radiopaedia links under each diagnosis in the differential list
+  const caseMod=()=>{const t=turns.filter(x=>x.role==='user').map(x=>x.text).join(' ');
+    return /\b(MRI?|MR[AV]?|T1|T2|FLAIR|DWI|ADC|SWI|STIR|gadolinium)\b/i.test(t)?'MRI':/\b(CT[AV]?|Hounsfield|HU)\b/.test(t)?'CT':/\b(ultrasound|sonograph|US|doppler|echogenic|hypoechoic|anechoic)\b/i.test(t)?'US':/\b(radiograph|x-?ray|CXR|plain film)\b/i.test(t)?'XR':''};
+  const lb=e=>{const f=e.target.closest('[data-big]');if(!f)return;e.preventDefault();const d=JSON.parse(f.dataset.big);
+    const o=document.createElement('div');o.className='ddx-lb';o.innerHTML=`<figure><img src="${esc(d.large)}" alt=""><figcaption>${esc(d.caption)}<span>${esc(d.source)}${d.license?' · '+esc(d.license):''} · via ${esc(d.via)} · <a href="${esc(d.url)}" target="_blank" rel="noopener">Source ↗</a></span></figcaption><button type="button" aria-label="Close">×</button></figure>`;
+    o.onclick=ev=>{if(ev.target===o||ev.target.tagName==='BUTTON')o.remove()};document.addEventListener('keydown',function k(ev){if(ev.key==='Escape'){o.remove();document.removeEventListener('keydown',k)}});document.body.appendChild(o)};
+  const enrich=(body,mod)=>{let h=[...body.querySelectorAll('h3')].find(x=>/differential/i.test(x.textContent));if(!h)return;
+    let ol=h.nextElementSibling;while(ol&&!/^(OL|UL)$/.test(ol.tagName)&&ol.tagName!=='H3')ol=ol.nextElementSibling;if(!ol||ol.tagName==='H3')return;
+    [...ol.children].slice(0,6).forEach(li=>{const st=li.querySelector('strong');const dx=(st?st.textContent:li.textContent.split(/\s[—–-]\s/)[0]).replace(/[*:]/g,'').trim();if(!dx||dx.length>80)return;
+      const rp=`https://radiopaedia.org/search?lang=us&q=${encodeURIComponent(dx)}&scope=articles`;
+      const ex=document.createElement('div');ex.className='ddx-ex';
+      ex.innerHTML=`<a class="ddx-rp" href="${rp}" target="_blank" rel="noopener">Radiopaedia: ${esc(dx)} ↗</a><div class="ddx-imgs"><span class="ddx-sk"></span><span class="ddx-sk"></span><span class="ddx-sk"></span></div>`;
+      li.appendChild(ex);ex.onclick=lb;
+      fetch(`/api/cases?q=${encodeURIComponent(dx)}&mod=${mod}`).then(r=>r.ok?r.json():null).then(d=>{const box=ex.querySelector('.ddx-imgs');
+        if(!d||!d.images||!d.images.length){box.remove();return}
+        box.innerHTML=d.images.map(x=>`<a href="${esc(x.url)}" target="_blank" rel="noopener" data-big='${esc(JSON.stringify(x)).replace(/'/g,'&#39;')}' title="${esc(x.caption)}"><img src="${esc(x.thumb)}" alt="${esc(dx)} example" loading="lazy" referrerpolicy="no-referrer" onerror="var b=this.closest('.ddx-imgs');this.parentNode.remove();if(b&&!b.querySelector('img'))b.remove()"></a>`).join('')
+          +`<small>Example images from open-access sources (${[...new Set(d.images.map(x=>x.via))].join(', ')}); may not match this case exactly.</small>`})
+        .catch(()=>ex.querySelector('.ddx-imgs')?.remove())})};
   form.onsubmit=async e=>{e.preventDefault();
     const text=ta.value.trim(),st=$('#dx-status');
     if(!text&&!pend.length){st.textContent=turns.length?'Type a message or add an image.':'Describe the case or add an image.';return}
@@ -1052,6 +1070,7 @@ function ddxView(){
       turns.push({role:'assistant',text:out});
       body.innerHTML=md(out)+`<div class="ddx-foot"><span class="ddx-model">${esc(model)} · Cloudflare Workers AI · verify before relying on it</span><button type="button" class="ddx-copy">Copy</button></div>`;
       body.querySelector('.ddx-copy').onclick=ev=>{navigator.clipboard.writeText(out).then(()=>{ev.target.textContent='Copied'})};
+      enrich(body,caseMod());
     }catch(err){turns.pop();body.innerHTML=`<p class="ddx-err">${err.message==='offline'?'The generator runs on radessential.com; it is not available in this preview.':esc(err.message||'Could not reach the AI service.')}</p>`;
       if(!turns.length){ta.value=text;mode()}}
     finally{btn.disabled=false;ta.focus()}};

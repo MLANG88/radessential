@@ -411,6 +411,20 @@ body.an-maxed{overflow:hidden}
 .ddx-res{margin-top:22px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:6px 20px 16px}
 .ddx-list{padding-left:20px;display:grid;gap:12px}.ddx-list li p{margin:4px 0;font-size:14.5px}
 .ddx-h{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.ddx-k{display:inline-block;min-width:62px;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.ddx-ex{margin:6px 0 4px;display:grid;gap:6px}
+.ddx-rp{justify-self:start;font-size:12.5px;font-weight:600;color:var(--accent);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:var(--bg)}
+.ddx-rp:hover{border-color:var(--accent)}
+.ddx-imgs{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ddx-imgs a{display:block;width:96px;height:96px;border-radius:10px;overflow:hidden;background:#000;border:1px solid var(--line)}
+.ddx-imgs img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s}.ddx-imgs a:hover img{transform:scale(1.05)}
+.ddx-imgs small{flex-basis:100%;font-size:11.5px;color:var(--muted)}
+.ddx-sk{width:96px;height:96px;border-radius:10px;background:linear-gradient(90deg,var(--line),var(--surface),var(--line));background-size:200% 100%;animation:ddxsk 1.2s linear infinite}
+@keyframes ddxsk{to{background-position:-200% 0}}
+.ddx-lb{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.82);display:grid;place-items:center;padding:24px}
+.ddx-lb figure{position:relative;margin:0;max-width:min(920px,100%);max-height:100%;display:grid;gap:10px;background:#111;border-radius:14px;padding:14px;color:#e8e8e8}
+.ddx-lb img{max-width:100%;max-height:70vh;object-fit:contain;justify-self:center}
+.ddx-lb figcaption{font-size:13.5px;line-height:1.45;max-height:20vh;overflow:auto}.ddx-lb figcaption span{display:block;margin-top:6px;color:#aaa;font-size:12px}.ddx-lb a{color:#7fd3ff}
+.ddx-lb button{position:absolute;top:6px;right:8px;background:none;border:0;color:#fff;font-size:26px;cursor:pointer}
 .ddx-thread{display:grid;gap:14px;margin:4px 0 14px}.ddx-thread:empty{display:none}
 .ddx-comp{position:sticky;bottom:12px;z-index:5;display:grid;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
 .ddx-comp.on{border-color:var(--accent);background:var(--accent-soft)}

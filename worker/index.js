@@ -94,10 +94,92 @@ async function ddx(request, env) {
   return json({ error: quota ? 'The free AI allowance for today has been used. Please try again later.' : 'The AI service could not answer. Please try again.', detail: detail.slice(0, 900) }, quota ? 429 : 502);
 }
 
+
+// ---------- Example case images: /api/cases?q=<diagnosis>&mod=<CT|MRI|US|XR> ----------
+// Sources with open reuse terms only: NLM Open-i (figures from PubMed Central open-access articles) and Wikimedia Commons.
+// Radiopaedia is linked, not scraped. Results are cached at the edge for a week.
+const UA = 'RadEssential/1.0 (https://radessential.com; educational radiology reference)';
+const OPENI_IT = { CT: 'c', MRI: 'm', US: 'u', XR: 'x' };
+const strip = t => String(t || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+async function getJSON(url) {
+  const r = await fetch(url, { headers: { 'user-agent': UA, accept: 'application/json' }, cf: { cacheTtl: 86400 } });
+  if (!r.ok) throw new Error(url.split('?')[0] + ' ' + r.status);
+  return r.json();
+}
+async function openi(q, mod) {
+  const base = 'https://openi.nlm.nih.gov';
+  const tries = [];
+  if (OPENI_IT[mod]) tries.push(`${base}/api/search?query=${encodeURIComponent(q)}&m=1&n=12&coll=pmc&it=${OPENI_IT[mod]}`);
+  tries.push(`${base}/api/search?query=${encodeURIComponent(q + (mod ? ' ' + mod : ''))}&m=1&n=12&coll=pmc&it=xg`);
+  for (const u of tries) {
+    let d; try { d = await getJSON(u); } catch { continue; }
+    const list = d.list || d.results || [];
+    const abs = x => !x ? '' : /^https?:/.test(x) ? x : base + (x.startsWith('/') ? '' : '/') + x;
+    const out = list.map(it => {
+      const img = it.image || {};
+      const thumb = abs(it.imgThumbLarge || it.imgThumb || it.imgLarge);
+      const large = abs(it.imgLarge || it.imgThumbLarge || it.imgThumb);
+      const pmc = it.pmcid || (/^PMC\d+/.test(it.uid || '') ? it.uid.match(/^PMC\d+/)[0] : '');
+      return {
+        thumb, large,
+        caption: strip(img.caption || it.caption || '').slice(0, 400),
+        title: strip(it.title || ''),
+        source: strip(it.journal_title || it.journal || 'PubMed Central'),
+        url: pmc ? `https://pmc.ncbi.nlm.nih.gov/articles/${pmc}/` : abs(it.detailedQueryURL || ''),
+        license: strip(it.license_type || it.license || 'Open-access article'),
+        via: 'NLM Open-i',
+      };
+    }).filter(x => x.thumb && x.url);
+    // keep figures whose caption or title actually mentions the diagnosis
+    const key = q.toLowerCase().split(/[\s,()–-]+/).filter(w => w.length > 3);
+    const hit = out.filter(x => key.some(k => (x.caption + ' ' + x.title).toLowerCase().includes(k)));
+    if (hit.length) return hit;
+  }
+  return [];
+}
+async function commons(q, mod) {
+  const words = { CT: 'CT', MRI: 'MRI', US: 'ultrasound', XR: 'radiograph' };
+  const sq = `${q} ${words[mod] || 'radiology'} filetype:bitmap`;
+  const u = 'https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrnamespace=6&gsrlimit=8'
+    + `&gsrsearch=${encodeURIComponent(sq)}&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=360`;
+  let d; try { d = await getJSON(u); } catch { return []; }
+  const pages = Object.values(d.query?.pages || {}).sort((a, b) => (a.index || 0) - (b.index || 0));
+  return pages.map(p => {
+    const ii = (p.imageinfo || [])[0] || {}; const m = ii.extmetadata || {};
+    return {
+      thumb: ii.thumburl || ii.url, large: ii.url,
+      caption: strip(m.ImageDescription?.value || p.title.replace(/^File:/, '').replace(/\.\w+$/, '')).slice(0, 400),
+      title: p.title.replace(/^File:/, ''),
+      source: strip(m.Artist?.value || 'Wikimedia Commons').slice(0, 80),
+      url: ii.descriptionurl || `https://commons.wikimedia.org/wiki/${encodeURIComponent(p.title)}`,
+      license: strip(m.LicenseShortName?.value || ''),
+      via: 'Wikimedia Commons',
+    };
+  }).filter(x => x.thumb && /\.(jpe?g|png|webp|gif)/i.test(x.large || ''));
+}
+async function cases(request, ctx) {
+  const url = new URL(request.url);
+  const q = (url.searchParams.get('q') || '').replace(/[^\p{L}\p{N}\s,()'’–-]/gu, ' ').trim().slice(0, 80);
+  const mod = (url.searchParams.get('mod') || '').toUpperCase();
+  if (!q) return json({ error: 'Missing q.' }, 400);
+  const cache = typeof caches !== 'undefined' ? caches.default : null;
+  const key = new Request(`https://radessential.com/api/cases?q=${encodeURIComponent(q.toLowerCase())}&mod=${mod}&v=1`);
+  if (cache) { const hit = await cache.match(key); if (hit) return hit; }
+  const [a, b] = await Promise.all([openi(q, mod).catch(() => []), commons(q, mod).catch(() => [])]);
+  const seen = new Set(); const images = [];
+  for (const x of [...a.slice(0, 3), ...b, ...a.slice(3)]) { if (seen.has(x.thumb)) continue; seen.add(x.thumb); images.push(x); if (images.length >= 4) break; }
+  const res = new Response(JSON.stringify({ q, mod, images,
+    radiopaedia: `https://radiopaedia.org/search?lang=us&q=${encodeURIComponent(q)}&scope=articles` }),
+    { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': images.length ? 'public, max-age=604800' : 'public, max-age=3600' } });
+  if (cache && ctx) ctx.waitUntil(cache.put(key, res.clone()));
+  return res;
+}
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === '/api/ddx') return ddx(request, env);
+    if (url.pathname === '/api/cases') return cases(request, ctx);
     return env.ASSETS.fetch(request);
   },
 };
