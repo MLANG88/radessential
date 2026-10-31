@@ -882,9 +882,10 @@ function renderNav(){
   if(want.length){openSecs=[...openSecs,...want];store.set('open',openSecs)}
   const chev=`<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3l5 5-5 5"/></svg>`;
   const grp=(id,name,list,isCur)=>`<details class="grp" data-sec="${id}"${openSecs.includes(id)?' open':''}><summary><span>${name}</span><span class="cnt">${list.length}</span>${chev}</summary><div class="items">${list.map(e=>`<a href="#${e.id}" class="${isCur(e)?'cur':''}">${e.title}</a>`).join('')}</div></details>`;
-  let h=`<a class="home${!cur&&!NAV.caseSec&&!NAV.anat?' cur':''}" href="#">Index</a><div class="navtools"><button type="button" id="expAll">Expand all</button><button type="button" id="colAll">Collapse all</button></div>`;
+  let h=`<a class="home${!cur&&!NAV.caseSec&&!NAV.anat&&!NAV.tool?' cur':''}" href="#">Index</a><div class="navtools"><button type="button" id="expAll">Expand all</button><button type="button" id="colAll">Collapse all</button></div>`;
   h+=`<details class="grp atlas-grp" data-sec="anatomy"${openSecs.includes('anatomy')?' open':''}><summary><span>Atlas</span><span class="cnt">${ATLAS.length}</span>${chev}</summary><div class="items">${ATLAS.map(a=>`<a href="#anatomy-${a.id}" class="${NAV.anat===a.id?'cur':''}">${a.title}</a>`).join('')}</div></details>`;
   if(pins.length)h+=grp('pinned','Pinned',pins.filter(id=>byId[id]).map(id=>byId[id]),e=>e.id===cur);
+  h+=`<a class="tool-link${NAV.tool==='ddx'?' cur':''}" href="#ddx"><span>Differential generator</span><span class="soon">AI</span></a>`;
   {const list=[...inSec('calc'),...CALC_LINKS.map(i=>byId[i])];h+=grp('calc','Calculators',list,e=>e.id===cur&&e.sec==='calc').replace('class="grp"','class="grp calc-grp"')}
   h+=`<div class="navh">Body regions</div>`;
   SECTIONS.filter(s=>s.id!=='calc').forEach(s=>{h+=grp(s.id,s.name,inSec(s.id),e=>e.id===cur&&s.id===e.sec)});
@@ -965,6 +966,76 @@ function caseCard(c){
   const img=c.images&&c.images[0];
   return `<a class="ccard" href="#case-${esc(c.id)}"><div class="cthumb">${img?`<img src="${imgSrc(img)}" alt="" loading="lazy">`:'<span>No images</span>'}</div>
   <div class="cbody"><b>${esc(c.title)}</b><div class="cmeta">${(c.modality||[]).map(m=>`<span class="tag">${esc(m)}</span>`).join('')}${c.images&&c.images.length>1?`<span class="tag">${c.images.length} images</span>`:''}</div></div></a>`;
+}
+/* ---------- AI differential generator ---------- */
+function ddxView(){
+  const v=V();
+  const MODS=['','CT','MRI','Radiograph','Ultrasound','PET/CT','Nuclear medicine','Fluoroscopy','Mammography','Angiography'];
+  const REGS=['','Brain','Head and neck','Spine','Chest','Cardiac','Abdomen','Pelvis','Musculoskeletal','Breast','Vascular','Pediatric'];
+  v.innerHTML=`<div class="wrap">
+  <header class="ebanner"${IMGV('brain')}><div class="crumb"><a href="#">Index</a> / Tools</div>
+  <div class="ehead"><h1>Differential generator</h1></div><div class="meta"><span class="tag v">AI assisted</span><span class="tag">Text or images</span></div></header>
+  <p class="lede">Describe the imaging findings, add an image if you like, and get a ranked differential with supporting and opposing features, do-not-miss diagnoses and next steps.</p>
+  <div class="ddx-warn"><b>Educational aid, not a diagnosis.</b> Output comes from an open AI model and can be wrong or incomplete. Verify against the images, the clinical picture and primary sources. Do not enter names, dates, record numbers or other identifiers, and upload only de-identified images.</div>
+  <form class="ddx-form" id="ddx-form" autocomplete="off">
+    <div class="ddx-row">
+      <label class="fl"><span>Age</span><input id="dx-age" inputmode="numeric" maxlength="6" placeholder="e.g. 54"></label>
+      <label class="fl"><span>Sex</span><select id="dx-sex"><option value="">–</option><option>Female</option><option>Male</option></select></label>
+      <label class="fl"><span>Modality</span><select id="dx-mod">${MODS.map(m=>`<option value="${m}">${m||'–'}</option>`).join('')}</select></label>
+      <label class="fl"><span>Region</span><select id="dx-reg">${REGS.map(m=>`<option value="${m}">${m||'–'}</option>`).join('')}</select></label>
+    </div>
+    <label class="fl"><span>Clinical history <small>(optional)</small></span><input id="dx-hx" maxlength="600" placeholder="e.g. headache for 2 weeks, prior breast cancer"></label>
+    <label class="fl"><span>Imaging findings</span><textarea id="dx-find" rows="6" maxlength="4000" placeholder="e.g. 2.3 cm extra-axial dural-based mass along the left convexity, homogeneously enhancing, dural tail, adjacent hyperostosis, no restricted diffusion"></textarea></label>
+    <div class="ddx-drop" id="dx-drop" tabindex="0" role="button" aria-label="Add images"><input type="file" id="dx-file" accept="image/png,image/jpeg,image/webp" multiple hidden>
+      <b>Add up to 3 images</b><span>Drop, paste or click. Key images or screenshots work best; images are resized and stripped of file metadata before sending.</span></div>
+    <div class="ddx-thumbs" id="dx-thumbs"></div>
+    <label class="ddx-ok" id="dx-okwrap" hidden><input type="checkbox" id="dx-ok"> These images contain no patient names, dates, record numbers or other identifiers.</label>
+    <div class="ddx-actions"><button type="submit" class="btn pri" id="dx-go">Generate differential</button><button type="button" class="btn" id="dx-clear">Clear</button><span class="ddx-status" id="dx-status"></span></div>
+  </form>
+  <div id="dx-out"></div>
+  ${footer()}</div>`;
+  const $=s=>v.querySelector(s),imgs=[];
+  const drop=$('#dx-drop'),file=$('#dx-file');
+  const thumbs=()=>{$('#dx-thumbs').innerHTML=imgs.map((u,i)=>`<figure><img src="${u}" alt="Uploaded image ${i+1}"><button type="button" data-rm="${i}" aria-label="Remove image ${i+1}">×</button></figure>`).join('');$('#dx-okwrap').hidden=!imgs.length};
+  const addFile=async f=>{if(!/^image\/(png|jpe?g|webp)$/.test(f.type)||imgs.length>=3)return;
+    const bmp=await createImageBitmap(f);const k=Math.min(1,1024/Math.max(bmp.width,bmp.height));
+    const c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+    imgs.push(c.toDataURL('image/jpeg',0.86));thumbs()};
+  const addFiles=async fl=>{for(const f of fl)await addFile(f)};
+  drop.onclick=()=>file.click();drop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();file.click()}};
+  file.onchange=()=>{addFiles(file.files);file.value=''};
+  drop.ondragover=e=>{e.preventDefault();drop.classList.add('on')};drop.ondragleave=()=>drop.classList.remove('on');
+  drop.ondrop=e=>{e.preventDefault();drop.classList.remove('on');addFiles(e.dataTransfer.files)};
+  v.addEventListener('paste',e=>{const fs=[...(e.clipboardData||{}).items||[]].filter(i=>i.kind==='file').map(i=>i.getAsFile());if(fs.length){e.preventDefault();addFiles(fs)}});
+  $('#dx-thumbs').onclick=e=>{const b=e.target.closest('[data-rm]');if(b){imgs.splice(+b.dataset.rm,1);thumbs()}};
+  $('#dx-clear').onclick=()=>{$('#ddx-form').reset();imgs.length=0;thumbs();$('#dx-out').innerHTML='';$('#dx-status').textContent=''};
+  const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const LK={'most likely':'crit','likely':'warn','possible':'info','less likely':'ok'};
+  const list=(t,a)=>a&&a.length?`<h3>${t}</h3><ul class="pearls">${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'';
+  $('#ddx-form').onsubmit=async e=>{e.preventDefault();
+    const findings=$('#dx-find').value.trim(),st=$('#dx-status'),out=$('#dx-out');
+    if(!findings&&!imgs.length){st.textContent='Describe the findings or add an image.';return}
+    if(imgs.length&&!$('#dx-ok').checked){st.textContent='Confirm the images are de-identified.';return}
+    const btn=$('#dx-go');btn.disabled=true;st.textContent='Thinking… this can take 10–30 seconds.';out.innerHTML='';
+    try{
+      const r=await fetch('/api/ddx',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({findings,images:imgs,context:{age:$('#dx-age').value.trim(),sex:$('#dx-sex').value,modality:$('#dx-mod').value,region:$('#dx-reg').value,history:$('#dx-hx').value.trim()}})});
+      const ct=r.headers.get('content-type')||'';
+      if(!ct.includes('json'))throw new Error(r.status===404||r.status===405?'offline':'bad');
+      const d=await r.json();
+      if(!r.ok||d.error){st.textContent=d.error||'Something went wrong.';return}
+      st.textContent='';
+      if(d.result){const R=d.result;
+        out.innerHTML=`<section class="ddx-res">
+        ${R.image_description?`<h3>What the model sees</h3><p>${esc(R.image_description)}</p>`:''}
+        ${R.summary?`<h3>Summary</h3><p>${esc(R.summary)}</p>`:''}
+        <h3>Differential</h3><ol class="ddx-list">${(R.differential||[]).map(x=>`<li><div class="ddx-h"><b>${esc(x.diagnosis)}</b>${x.likelihood?B(esc(x.likelihood),LK[String(x.likelihood).toLowerCase()]||'info'):''}</div>
+          ${x.supporting?`<p><span class="ddx-k">For</span>${esc(x.supporting)}</p>`:''}${x.against?`<p><span class="ddx-k">Against</span>${esc(x.against)}</p>`:''}</li>`).join('')}</ol>
+        ${list('Do not miss',R.do_not_miss)}${list('Features that discriminate',R.discriminating_features)}${list('Suggested next steps',R.next_steps)}
+        ${R.limitations?N(esc(R.limitations)):''}
+        <p class="ddx-model">Generated by ${esc(String(d.model||'').replace('@cf/',''))} on Cloudflare Workers AI. Check every suggestion before relying on it.</p></section>`;
+      }else out.innerHTML=`<section class="ddx-res"><h3>Response</h3><p style="white-space:pre-wrap">${esc(d.text)}</p></section>`;
+    }catch(err){st.textContent=err.message==='offline'?'The generator runs on radessential.com; it is not available in this preview.':'Could not reach the AI service. Check your connection and try again.'}
+    finally{btn.disabled=false}};
 }
 function casesSoon(){
   V().innerHTML=`<div class="wrap">
@@ -1577,6 +1648,7 @@ function render(h){
   if(h==='anatomy'){NAV.anat='home';anatomyHome()}
   else if(h.startsWith('anatomy-')&&ATLAS_BY[h.slice(8)]){NAV.anat=h.slice(8);anatomyView(h.slice(8))}
   else if(byId[h]){NAV.entry=h;entry(byId[h])}
+  else if(h==='ddx'){NAV.tool='ddx';ddxView()}
   else if(h==='cases'||(h.startsWith('cases-')&&CASE_SEC[h.slice(6)])){NAV.caseSec='all';casesSoon()}
   else if(h.startsWith('case-new-')&&CASE_SEC[h.slice(9)]){NAV.caseSec=h.slice(9);caseForm(null,h.slice(9))}
   else if(h.startsWith('case-edit-')){const c=findCase(h.slice(10));NAV.caseSec=c?c.sec:'all';caseForm(h.slice(10))}
