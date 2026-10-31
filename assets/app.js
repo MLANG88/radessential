@@ -967,41 +967,51 @@ function caseCard(c){
   return `<a class="ccard" href="#case-${esc(c.id)}"><div class="cthumb">${img?`<img src="${imgSrc(img)}" alt="" loading="lazy">`:'<span>No images</span>'}</div>
   <div class="cbody"><b>${esc(c.title)}</b><div class="cmeta">${(c.modality||[]).map(m=>`<span class="tag">${esc(m)}</span>`).join('')}${c.images&&c.images.length>1?`<span class="tag">${c.images.length} images</span>`:''}</div></div></a>`;
 }
-/* ---------- AI differential generator ---------- */
+/* ---------- AI differential generator (chat) ---------- */
 function ddxView(){
   const v=V();
   v.innerHTML=`<div class="wrap">
   <header class="ebanner"${IMGV('brain')}><div class="crumb"><a href="#">Index</a> / Tools</div>
-  <div class="ehead"><h1>Differential generator</h1></div><div class="meta"><span class="tag v">AI assisted</span><span class="tag">Free text, optional images</span></div></header>
-  <p class="lede">Describe the case in free text, optionally add up to four images, and get a ranked differential with supporting and opposing features, do-not-miss diagnoses and next steps.</p>
+  <div class="ehead"><h1>Differential generator</h1></div><div class="meta"><span class="tag v">AI assisted</span><span class="tag">Chat · free text · optional images</span></div></header>
+  <p class="lede">Describe the case and get a ranked differential. Then keep chatting: add new findings, history, labs or images, or ask a question, and the differential updates.</p>
   <div class="ddx-warn"><b>Educational aid, not a diagnosis.</b> Output comes from an open AI model and can be wrong or incomplete. Verify against the images, the clinical picture and primary sources. Do not enter names, dates, record numbers or other identifiers, and upload only de-identified images.</div>
-  <form class="ddx-form" id="ddx-form" autocomplete="off">
-    <label class="fl"><span>Case description</span><textarea id="dx-find" rows="7" maxlength="4000" placeholder="Describe the patient and findings in your own words, e.g. 54-year-old woman with headaches. MRI: 2.3 cm extra-axial dural-based mass along the left convexity, homogeneous enhancement, dural tail, adjacent hyperostosis, no restricted diffusion."></textarea></label>
-    <div class="ddx-drop" id="dx-drop" tabindex="0" role="button" aria-label="Add images"><input type="file" id="dx-file" accept="image/png,image/jpeg,image/webp" multiple hidden>
-      <b>Optional: add up to 4 images</b><span>Drop, paste or click. Key images or screenshots work best; images are resized and stripped of file metadata before sending.</span></div>
+  <div class="ddx-thread" id="dx-thread"></div>
+  <form class="ddx-comp" id="ddx-form" autocomplete="off">
     <div class="ddx-thumbs" id="dx-thumbs"></div>
+    <textarea id="dx-find" rows="4" maxlength="4000" placeholder="Describe the patient and findings, e.g. 54-year-old woman with headaches. MRI: 2.3 cm extra-axial dural-based mass, homogeneous enhancement, dural tail, adjacent hyperostosis, no restricted diffusion."></textarea>
     <label class="ddx-ok" id="dx-okwrap" hidden><input type="checkbox" id="dx-ok"> These images contain no patient names, dates, record numbers or other identifiers.</label>
-    <div class="ddx-actions"><button type="submit" class="btn pri" id="dx-go">Generate differential</button><button type="button" class="btn" id="dx-clear">Clear</button><span class="ddx-status" id="dx-status"></span></div>
+    <div class="ddx-bar">
+      <input type="file" id="dx-file" accept="image/png,image/jpeg,image/webp" multiple hidden>
+      <button type="button" class="ddx-ib" id="dx-att" title="Add images (up to 4 per case)" aria-label="Add images"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.5l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l9.2-9.2a3.7 3.7 0 015.2 5.2l-9.2 9.2a1.8 1.8 0 01-2.6-2.6l8.5-8.5"/></svg></button>
+      <span class="ddx-status" id="dx-status"></span>
+      <button type="button" class="btn" id="dx-clear" hidden>New case</button>
+      <button type="submit" class="btn pri" id="dx-go">Generate differential</button>
+    </div>
   </form>
-  <div id="dx-out"></div>
   ${footer()}</div>`;
-  const $=s=>v.querySelector(s),imgs=[];
-  const drop=$('#dx-drop'),file=$('#dx-file');
-  const thumbs=()=>{$('#dx-thumbs').innerHTML=imgs.map((u,i)=>`<figure><img src="${u}" alt="Uploaded image ${i+1}"><button type="button" data-rm="${i}" aria-label="Remove image ${i+1}">×</button></figure>`).join('');$('#dx-okwrap').hidden=!imgs.length};
-  const addFile=async f=>{if(!/^image\/(png|jpe?g|webp)$/.test(f.type)||imgs.length>=4)return;
+  const $=s=>v.querySelector(s);
+  const MAXIMG=4,turns=[];let pend=[];   // turns: {role:'user'|'assistant', text, images?}
+  const used=()=>turns.reduce((n,t)=>n+(t.images?t.images.length:0),0);
+  const thumbs=()=>{$('#dx-thumbs').innerHTML=pend.map((u,i)=>`<figure><img src="${u}" alt="Image ${i+1}"><button type="button" data-rm="${i}" aria-label="Remove image ${i+1}">×</button></figure>`).join('');$('#dx-okwrap').hidden=!pend.length};
+  const addFile=async f=>{if(!/^image\/(png|jpe?g|webp)$/.test(f.type))return;
+    if(used()+pend.length>=MAXIMG){$('#dx-status').textContent=`Up to ${MAXIMG} images per case.`;return}
     const bmp=await createImageBitmap(f);const k=Math.min(1,1024/Math.max(bmp.width,bmp.height));
     const c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
-    imgs.push(c.toDataURL('image/jpeg',0.86));thumbs()};
+    pend.push(c.toDataURL('image/jpeg',0.86));thumbs()};
   const addFiles=async fl=>{for(const f of [...fl])await addFile(f)};
-  drop.onclick=()=>file.click();drop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();file.click()}};
+  const file=$('#dx-file'),form=$('#ddx-form'),ta=$('#dx-find');
+  $('#dx-att').onclick=()=>file.click();
   file.onchange=()=>{addFiles(file.files);file.value=''};
-  drop.ondragover=e=>{e.preventDefault();drop.classList.add('on')};drop.ondragleave=()=>drop.classList.remove('on');
-  drop.ondrop=e=>{e.preventDefault();drop.classList.remove('on');addFiles(e.dataTransfer.files)};
-  v.addEventListener('paste',e=>{const fs=[...(e.clipboardData||{}).items||[]].filter(i=>i.kind==='file').map(i=>i.getAsFile());if(fs.length){e.preventDefault();addFiles(fs)}});
-  $('#dx-thumbs').onclick=e=>{const b=e.target.closest('[data-rm]');if(b){imgs.splice(+b.dataset.rm,1);thumbs()}};
-  $('#dx-clear').onclick=()=>{$('#ddx-form').reset();imgs.length=0;thumbs();$('#dx-out').innerHTML='';$('#dx-status').textContent=''};
+  form.ondragover=e=>{e.preventDefault();form.classList.add('on')};form.ondragleave=()=>form.classList.remove('on');
+  form.ondrop=e=>{e.preventDefault();form.classList.remove('on');addFiles(e.dataTransfer.files)};
+  ta.addEventListener('paste',e=>{const fs=[...(e.clipboardData||{}).items||[]].filter(i=>i.kind==='file').map(i=>i.getAsFile());if(fs.length){e.preventDefault();addFiles(fs)}});
+  ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&turns.length){e.preventDefault();form.requestSubmit()}});
+  $('#dx-thumbs').onclick=e=>{const b=e.target.closest('[data-rm]');if(b){pend.splice(+b.dataset.rm,1);thumbs()}};
+  const mode=()=>{const chat=turns.length>0;$('#dx-go').textContent=chat?'Send':'Generate differential';$('#dx-clear').hidden=!chat;
+    ta.rows=chat?2:4;ta.placeholder=chat?'Add findings, history, labs or images, or ask a question… (Enter to send, Shift+Enter for a new line)':ta.placeholder;form.classList.toggle('chat',chat)};
+  $('#dx-clear').onclick=()=>{turns.length=0;pend=[];thumbs();$('#dx-thread').innerHTML='';ta.value='';$('#dx-status').textContent='';
+    ta.placeholder='Describe the patient and findings, e.g. 54-year-old woman with headaches. MRI: 2.3 cm extra-axial dural-based mass, homogeneous enhancement, dural tail, adjacent hyperostosis, no restricted diffusion.';mode();ta.focus()};
   const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  // small, safe Markdown renderer: headings, lists, bold, italics, inline code, paragraphs
   const inl=t=>esc(t).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/(^|[^*])\*([^*\n]+?)\*/g,'$1<em>$2</em>').replace(/`([^`]+)`/g,'<code>$1</code>');
   const md=src=>{const L=src.replace(/<think>[\s\S]*?(<\/think>|$)/g,'').replace(/^\s*```(?:markdown)?\s*|```\s*$/g,'').replace(/\r/g,'').split('\n');let h='',list=null;
     const close=()=>{if(list){h+=`</${list}>`;list=null}};
@@ -1013,36 +1023,38 @@ function ddxView(){
       if(list&&/^\s{2,}\S/.test(raw)){h=h.replace(/<\/li>$/,' '+inl(l.trim())+'</li>');continue}
       close();h+=`<p>${inl(l)}</p>`}
     close();return h};
-  $('#ddx-form').onsubmit=async e=>{e.preventDefault();
-    const findings=$('#dx-find').value.trim(),st=$('#dx-status'),out=$('#dx-out');
-    if(!findings&&!imgs.length){st.textContent='Describe the case or add an image.';return}
-    if(imgs.length&&!$('#dx-ok').checked){st.textContent='Confirm the images are de-identified.';return}
-    const btn=$('#dx-go');btn.disabled=true;st.textContent='';
-    out.innerHTML=`<section class="ddx-ans"><div class="ddx-q">${findings?esc(findings):'<em>Image interpretation</em>'}${imgs.length?`<div class="ddx-qimgs">${imgs.map(u=>`<img src="${u}" alt="">`).join('')}</div>`:''}</div>
-      <div class="ddx-a"><div class="ddx-spark" aria-hidden="true"></div><div class="ddx-body" aria-live="polite"><div class="ddx-think"><span></span><span></span><span></span> Thinking…</div></div></div></section>`;
-    const body=out.querySelector('.ddx-body');out.querySelector('.ddx-ans').scrollIntoView({behavior:'smooth',block:'start'});
-    let text='';
+  form.onsubmit=async e=>{e.preventDefault();
+    const text=ta.value.trim(),st=$('#dx-status');
+    if(!text&&!pend.length){st.textContent=turns.length?'Type a message or add an image.':'Describe the case or add an image.';return}
+    if(pend.length&&!$('#dx-ok').checked){st.textContent='Confirm the images are de-identified.';return}
+    st.textContent='';const btn=$('#dx-go');btn.disabled=true;
+    const turn={role:'user',text,images:pend.slice()};turns.push(turn);pend=[];thumbs();$('#dx-ok').checked=false;ta.value='';mode();
+    const th=$('#dx-thread');
+    th.insertAdjacentHTML('beforeend',`<div class="ddx-q">${text?esc(text):'<em>Image interpretation</em>'}${turn.images.length?`<div class="ddx-qimgs">${turn.images.map(u=>`<img src="${u}" alt="">`).join('')}</div>`:''}</div>
+      <div class="ddx-a"><div class="ddx-spark" aria-hidden="true"></div><div class="ddx-body" aria-live="polite"><div class="ddx-think"><span></span><span></span><span></span> ${turns.length>1?'Updating the differential…':'Thinking…'}</div></div></div>`);
+    const body=[...th.querySelectorAll('.ddx-body')].pop();body.closest('.ddx-a').scrollIntoView({behavior:'smooth',block:'nearest'});
+    let out='';
     try{
-      const r=await fetch('/api/ddx',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({findings,images:imgs})});
+      const payload={messages:turns.map(t=>({role:t.role,text:t.text,images:t.images||[]}))};
+      const r=await fetch('/api/ddx',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
       const ct=r.headers.get('content-type')||'';
       if(ct.includes('json')){const d=await r.json();if(d.detail)console.warn('ddx detail:',d.detail);throw new Error((d.error||'Something went wrong.')+(d.detail?' ('+d.detail.slice(0,240)+')':''))}
       if(!ct.includes('event-stream'))throw new Error(r.status===404||r.status===405?'offline':'Could not reach the AI service. Please try again.');
       const model=(r.headers.get('x-model')||'').replace('@cf/','');
-      const rd=r.body.getReader(),dec=new TextDecoder();let buf='',raf=0;
-      const paint=()=>{raf=0;body.innerHTML=md(text)+'<span class="ddx-caret"></span>'};
-      let fin=false;
+      const rd=r.body.getReader(),dec=new TextDecoder();let buf='',fin=false;
+      const paint=()=>{body.innerHTML=md(out)+'<span class="ddx-caret"></span>'};
       while(!fin){const {done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});
         let i;while((i=buf.indexOf('\n'))>=0){const line=buf.slice(0,i).trim();buf=buf.slice(i+1);
           if(!line.startsWith('data:'))continue;const p=line.slice(5).trim();if(p==='[DONE]'){fin=true;break}if(!p)continue;
-          try{const j=JSON.parse(p);const t=j.response??j.choices?.[0]?.delta?.content??j.choices?.[0]?.text??'';if(t){for(let k=0;k<t.length;k+=18){text+=t.slice(k,k+18);paint();await new Promise(r=>setTimeout(r,12))}}}catch{}}}
+          try{const j=JSON.parse(p);const t=j.response??j.choices?.[0]?.delta?.content??j.choices?.[0]?.text??'';if(t){for(let k=0;k<t.length;k+=18){out+=t.slice(k,k+18);paint();await new Promise(r=>setTimeout(r,10))}}}catch{}}}
       if(fin)rd.cancel().catch(()=>{});
-      if(raf)cancelAnimationFrame(raf);raf=0;
-      if(!text.trim())throw new Error('The model returned an empty answer. Please try again.');
-      body.innerHTML=md(text)+`<p class="ddx-model">${esc(model)} · Cloudflare Workers AI · Educational aid; verify before relying on it.</p>
-        <div class="ddx-tools"><button type="button" class="btn" id="dx-copy">Copy</button></div>`;
-      body.querySelector('#dx-copy').onclick=ev=>{navigator.clipboard.writeText(text).then(()=>{ev.target.textContent='Copied'})};
-    }catch(err){body.innerHTML=`<p class="ddx-err">${err.message==='offline'?'The generator runs on radessential.com; it is not available in this preview.':esc(err.message||'Could not reach the AI service.')}</p>`}
-    finally{btn.disabled=false}};
+      if(!out.trim())throw new Error('The model returned an empty answer. Please try again.');
+      turns.push({role:'assistant',text:out});
+      body.innerHTML=md(out)+`<div class="ddx-foot"><span class="ddx-model">${esc(model)} · Cloudflare Workers AI · verify before relying on it</span><button type="button" class="ddx-copy">Copy</button></div>`;
+      body.querySelector('.ddx-copy').onclick=ev=>{navigator.clipboard.writeText(out).then(()=>{ev.target.textContent='Copied'})};
+    }catch(err){turns.pop();body.innerHTML=`<p class="ddx-err">${err.message==='offline'?'The generator runs on radessential.com; it is not available in this preview.':esc(err.message||'Could not reach the AI service.')}</p>`;
+      if(!turns.length){ta.value=text;mode()}}
+    finally{btn.disabled=false;ta.focus()}};
 }
 function casesSoon(){
   V().innerHTML=`<div class="wrap">

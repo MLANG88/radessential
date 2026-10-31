@@ -4,7 +4,8 @@
 // Primary: Google Gemma 4 26B (vision). Fallbacks if it is unavailable or rejects the request.
 const MODELS = ['@cf/google/gemma-4-26b-a4b-it', '@cf/google/gemma-3-12b-it', '@cf/meta/llama-4-scout-17b-16e-instruct'];
 const MAX_TEXT = 4000;
-const MAX_IMAGES = 4;
+const MAX_IMAGES = 4; // per conversation
+const MAX_TURNS = 16;
 const MAX_IMAGE_BYTES = 1_500_000; // per image, as base64 data URL length
 
 const SYSTEM = `You are an experienced radiologist helping a colleague think through a case. Write like a helpful expert answer in a search assistant: clear, well organised, readable at a glance.
@@ -20,7 +21,10 @@ Short bullets of critical diagnoses to exclude, if any are plausible.
 Short bullets: features or sequences that separate the leading options.
 ### Suggested next steps
 Short bullets: imaging, comparison or work-up only. Never give treatment advice.
-Keep it concise (under about 350 words). Do not add a disclaimer; the page shows one.`;
+Keep it concise (under about 350 words). Do not add a disclaimer; the page shows one.
+This is a conversation. On follow-up turns the user may add findings, history, labs, prior imaging or more images, correct earlier information, or ask a question.
+- If they add or change information: begin with a "### What changed" section (one to three bullets on how the new information shifts the picture, naming diagnoses that moved up, moved down or dropped out), then give the complete updated answer in the same sections as above, taking all information so far into account. Newer information overrides older information where they conflict.
+- If they only ask a question (for example about a sign, a discriminator or the next test), answer it directly and briefly in Markdown without repeating the full differential.`;
 
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), {
   status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
@@ -31,20 +35,30 @@ async function ddx(request, env) {
   if (!env.AI) return json({ error: 'The AI service is not configured for this site.' }, 503);
   let body;
   try { body = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
-  const findings = String(body.findings || '').slice(0, MAX_TEXT).trim();
-  const ctx = body.context || {};
-  const images = Array.isArray(body.images) ? body.images.slice(0, MAX_IMAGES) : [];
-  for (const im of images) {
-    if (typeof im !== 'string' || !/^data:image\/(png|jpe?g|webp);base64,/.test(im) || im.length > MAX_IMAGE_BYTES)
-      return json({ error: 'Images must be PNG, JPEG or WebP under about 1 MB each.' }, 400);
+  const okImg = im => typeof im === 'string' && /^data:image\/(png|jpe?g|webp);base64,/.test(im) && im.length <= MAX_IMAGE_BYTES;
+  // Accept a chat history ({messages:[{role,text,images}]}) or the original single-turn form ({findings, images}).
+  let turns = Array.isArray(body.messages)
+    ? (body.messages.length > MAX_TURNS ? [body.messages[0], ...body.messages.slice(-(MAX_TURNS - 2))] : body.messages).map(m => ({ role: m && m.role === 'assistant' ? 'assistant' : 'user', text: String(m && m.text || '').slice(0, MAX_TEXT).trim(), images: Array.isArray(m && m.images) ? m.images : [] }))
+    : [{ role: 'user', text: String(body.findings || '').slice(0, MAX_TEXT).trim(), images: Array.isArray(body.images) ? body.images : [] }];
+  while (turns.length && turns[0].role !== 'user') turns.shift();
+  if (!turns.length || turns[turns.length - 1].role !== 'user') return json({ error: 'The last message must come from the user.' }, 400);
+  let nImg = 0;
+  for (const t of turns) {
+    if (t.role === 'assistant') { t.images = []; continue; }
+    for (const im of t.images) if (!okImg(im)) return json({ error: 'Images must be PNG, JPEG or WebP under about 1 MB each.' }, 400);
+    nImg += t.images.length;
   }
-  if (!findings && !images.length) return json({ error: 'Describe the findings or add an image.' }, 400);
-
-  const userText = findings ? `Case and imaging findings:\n${findings}` : `No text was given; interpret the attached image${images.length > 1 ? 's' : ''}.`;
-  const content = images.length
-    ? [{ type: 'text', text: userText }, ...images.map(url => ({ type: 'image_url', image_url: { url } }))]
-    : userText;
-  const messages = [{ role: 'system', content: SYSTEM }, { role: 'user', content }];
+  if (nImg > MAX_IMAGES) return json({ error: `Up to ${MAX_IMAGES} images per case.` }, 400);
+  const last = turns[turns.length - 1];
+  if (!last.text && !last.images.length) return json({ error: 'Describe the findings or add an image.' }, 400);
+  const first = turns.findIndex(t => t.role === 'user');
+  const toMsg = (t, i) => {
+    if (t.role === 'assistant') return { role: 'assistant', content: t.text || '(no answer)' };
+    const lead = i === first ? (t.text ? `Case and imaging findings:\n${t.text}` : `No text was given; interpret the attached image${t.images.length > 1 ? 's' : ''}.`)
+      : (t.text ? `Update or follow-up:\n${t.text}` : `Additional image${t.images.length > 1 ? 's' : ''} attached; update the differential.`);
+    return { role: 'user', content: t.images.length ? [{ type: 'text', text: lead }, ...t.images.map(url => ({ type: 'image_url', image_url: { url } }))] : lead };
+  };
+  const messages = [{ role: 'system', content: SYSTEM }, ...turns.map(toMsg)];
 
   // Non-streaming call with server-side checks: reasoning models (Gemma 4) can spend the token budget on hidden
   // "thinking" and return no visible text, so an empty answer falls through to the next model.
