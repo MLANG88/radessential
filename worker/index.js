@@ -7,33 +7,24 @@ const MAX_TEXT = 4000;
 const MAX_IMAGES = 4;
 const MAX_IMAGE_BYTES = 1_500_000; // per image, as base64 data URL length
 
-const SYSTEM = `You are a board-certified radiologist helping another radiologist build a differential diagnosis.
-Work only from the findings and images provided. Do not invent findings that were not described or are not visible.
-If images are provided, first describe what you can actually see (modality, plane, sequence or phase if identifiable, location, key features), and say plainly when image quality, a single slice, or missing context limits interpretation.
-Rank diagnoses by likelihood given any age, sex, history and imaging features in the text. Always include critical "do not miss" diagnoses when they are plausible.
-Use standard radiology terminology. Be concise. Never give treatment advice; recommend imaging or work-up steps only.
-Respond with JSON only, no markdown, matching exactly this shape:
-{"image_description": string (empty if no image),
- "summary": string (one or two sentences restating the key findings),
- "differential": [{"diagnosis": string, "likelihood": "most likely" | "likely" | "possible" | "less likely", "supporting": string, "against": string}],
- "do_not_miss": [string],
- "discriminating_features": [string],
- "next_steps": [string],
- "limitations": string}
-Give 3 to 7 entries in "differential", ordered from most to least likely.`;
+const SYSTEM = `You are an experienced radiologist helping a colleague think through a case. Write like a helpful expert answer in a search assistant: clear, well organised, readable at a glance.
+Work only from what the user describes and what is visible in any attached images. Never invent findings. If images are attached, start by briefly saying what you can see (modality, plane, sequence or phase if identifiable, location, key features) and note any limits, such as a single slice or poor quality.
+Format the answer in Markdown with these sections, using ### headings:
+### Key findings
+One or two sentences.
+### Differential diagnosis
+A numbered list ordered from most to least likely, 3 to 6 items. Each item: **Diagnosis** — *likelihood (most likely / likely / possible / less likely)* — one or two sentences on the features for and against.
+### Don't miss
+Short bullets of critical diagnoses to exclude, if any are plausible.
+### Helpful discriminators
+Short bullets: features or sequences that separate the leading options.
+### Suggested next steps
+Short bullets: imaging, comparison or work-up only. Never give treatment advice.
+Keep it concise (under about 350 words). Do not add a disclaimer; the page shows one.`;
 
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), {
   status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
 });
-
-function parseModelJSON(text) {
-  if (typeof text !== 'string') return text && typeof text === 'object' ? text : null;
-  const t = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
-  try { return JSON.parse(t); } catch {}
-  const a = t.indexOf('{'), b = t.lastIndexOf('}');
-  if (a >= 0 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch {} }
-  return null;
-}
 
 async function ddx(request, env) {
   if (request.method !== 'POST') return json({ error: 'Use POST.' }, 405);
@@ -58,12 +49,9 @@ async function ddx(request, env) {
   let lastErr;
   for (const model of MODELS) {
     try {
-      const out = await env.AI.run(model, { messages, max_tokens: 1400, temperature: 0.2 });
-      const raw = out && (out.response ?? out.result?.response ?? out.choices?.[0]?.message?.content);
-      const parsed = parseModelJSON(raw);
-      if (parsed && Array.isArray(parsed.differential)) return json({ ok: true, model, result: parsed });
-      if (raw) return json({ ok: true, model, text: typeof raw === 'string' ? raw : JSON.stringify(raw) });
-      lastErr = new Error('Empty model response');
+      const stream = await env.AI.run(model, { messages, max_tokens: 1400, temperature: 0.3, stream: true });
+      if (!stream || typeof stream.getReader !== 'function') throw new Error('No stream');
+      return new Response(stream, { headers: { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', 'x-model': model } });
     } catch (e) { lastErr = e; }
   }
   const msg = String(lastErr && lastErr.message || lastErr);
@@ -78,4 +66,4 @@ export default {
     return env.ASSETS.fetch(request);
   },
 };
-export { parseModelJSON, SYSTEM };
+export { SYSTEM };
