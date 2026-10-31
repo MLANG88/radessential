@@ -883,9 +883,9 @@ function renderNav(){
   const chev=`<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3l5 5-5 5"/></svg>`;
   const grp=(id,name,list,isCur)=>`<details class="grp" data-sec="${id}"${openSecs.includes(id)?' open':''}><summary><span>${name}</span><span class="cnt">${list.length}</span>${chev}</summary><div class="items">${list.map(e=>`<a href="#${e.id}" class="${isCur(e)?'cur':''}">${e.title}</a>`).join('')}</div></details>`;
   let h=`<a class="home${!cur&&!NAV.caseSec&&!NAV.anat&&!NAV.tool?' cur':''}" href="#">Index</a><div class="navtools"><button type="button" id="expAll">Expand all</button><button type="button" id="colAll">Collapse all</button></div>`;
+  h+=`<a class="tool-link${NAV.tool==='ddx'?' cur':''}" href="#ddx"><span>Differential generator</span><span class="soon">AI</span></a>`;
   h+=`<details class="grp atlas-grp" data-sec="anatomy"${openSecs.includes('anatomy')?' open':''}><summary><span>Atlas</span><span class="cnt">${ATLAS.length}</span>${chev}</summary><div class="items">${ATLAS.map(a=>`<a href="#anatomy-${a.id}" class="${NAV.anat===a.id?'cur':''}">${a.title}</a>`).join('')}</div></details>`;
   if(pins.length)h+=grp('pinned','Pinned',pins.filter(id=>byId[id]).map(id=>byId[id]),e=>e.id===cur);
-  h+=`<a class="tool-link${NAV.tool==='ddx'?' cur':''}" href="#ddx"><span>Differential generator</span><span class="soon">AI</span></a>`;
   {const list=[...inSec('calc'),...CALC_LINKS.map(i=>byId[i])];h+=grp('calc','Calculators',list,e=>e.id===cur&&e.sec==='calc').replace('class="grp"','class="grp calc-grp"')}
   h+=`<div class="navh">Body regions</div>`;
   SECTIONS.filter(s=>s.id!=='calc').forEach(s=>{h+=grp(s.id,s.name,inSec(s.id),e=>e.id===cur&&s.id===e.sec)});
