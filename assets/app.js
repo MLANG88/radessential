@@ -905,33 +905,32 @@ const CASE_IMG={neuro:'brain',hn:'neck',chest:'thoracic',cardiac:'cardiac',vascu
 const IMGV=k=>k?` style="--img:url('${new URL('img/sec-'+k+'.webp',document.baseURI).href}')"`:'';
 const COVER=(name,count,k)=>`<div class="cover${k?'':' plain'}"${IMGV(k)}><h2>${name}</h2>${count!==''?`<span>${count}</span>`:''}</div>`;
 function home(){
-  const chip=ids=>`<div class="chips">${ids.filter(i=>byId[i]).map(i=>`<a href="#${i}">${byId[i].title}</a>`).join('')}</div>`;
-  const quick=['neck-nodes','le-fort','fleischner','bosniak','lirads','tirads','aspects'].filter(i=>byId[i]);
-  const nCases=casesState==='ready'?CASES.length:'';
-  V().innerHTML=`<div class="wrap wide">
-  <section class="home-ddx"><div class="home-ddx-h"><h2>Differential generator <span class="soon">AI</span></h2><a href="#ddx">Open full page →</a></div>
-  <p>Describe the findings, add images if you like, and get a ranked differential with Radiopaedia links. Keep chatting to refine it.</p>
-  ${ddxBlock()}</section>
+  const tiles=[...SECTIONS.filter(s=>s.id!=='calc').map(s=>({h:'#sec-'+s.id,n:s.name,c:inSec(s.id).length,k:SEC_IMG[s.id]})),
+    {h:'#sec-calc',n:'Calculators',c:E.filter(e=>e.init).length,k:null},{h:'#anatomy',n:'Atlas',c:ATLAS.length,k:(ATLAS[0]||{}).img}];
+  const pinned=pins.filter(i=>byId[i]);
+  V().innerHTML=`<div class="wrap wide home">
   <section class="hero2">
     <div>
       <span class="eyebrow">Reading-room reference</span>
       <h1>The classifications you look up <em>mid-read.</em></h1>
-      <p>Grading systems, node stations, follow-up algorithms and calculators, each traced to its primary publication or society white paper. Press <span class="mono">/</span> to search from anywhere.</p>
-      <div class="hstats"><span><b>${E.length}</b> references</span><span><b>${E.filter(e=>e.body.includes('data-tree')).length}</b> decision trees</span><span><b>${E.filter(e=>e.init).length}</b> calculators</span>${nCases!==''?`<span><b>${nCases}</b> cases</span>`:''}</div>
-      <div class="quick">${quick.map(i=>`<a href="#${i}">${byId[i].title}</a>`).join('')}</div>
+      <p>Grading systems, node stations, follow-up algorithms and calculators, each traced to its primary publication or society white paper. Press <span class="mono">/</span> to search.</p>
     </div>
     <div class="mosaic" aria-hidden="true"><div${IMGV('brain')}><small>MRI</small></div><div${IMGV('cardiac')}><small>Cardiac</small></div><div${IMGV('vascular')}><small>CTA</small></div></div>
   </section>
-  ${pins.length?`<div class="strip"><h2>Pinned</h2>${chip(pins)}</div>`:''}
-  ${recent.length?`<div class="strip"><h2>Recently viewed</h2>${chip(recent)}</div>`:''}
-  <div class="sechead"><h2>Reference</h2></div>
-  <div class="secs">${SECTIONS.filter(s=>s.id!=='calc').map(s=>`<section class="sec">${COVER(s.name,inSec(s.id).length,SEC_IMG[s.id])}<ul>${inSec(s.id).map(e=>`<li><a href="#${e.id}">${e.title}<small>${e.ver}</small></a></li>`).join('')}</ul></section>`).join('')}
-  <section class="sec">${COVER('Calculators',E.filter(e=>e.init).length,null)}<ul>${E.filter(e=>e.init).map(e=>`<li><a href="#${e.id}">${e.title}<small>${secName(e.sec)}</small></a></li>`).join('')}</ul></section></div>
-  <div class="sechead"><h2>Atlas</h2><a href="#anatomy">All atlases →</a></div>
-  <div class="anat-cards">${ATLAS.map(a=>`<a class="csec" href="#anatomy-${a.id}">${COVER(a.title,'',a.img)}<span class="anat-sub">${a.sub}</span></a>`).join('')}</div>
-  <div class="sechead"><h2>Cases</h2><span class="soon-t">Coming soon</span></div>
+  <section class="home-ddx"><div class="home-ddx-h"><h2>Differential generator <span class="soon">AI</span></h2><a href="#ddx">Full page →</a></div>
+  ${ddxBlock()}</section>
+  ${pinned.length?`<div class="strip"><h2>Pinned</h2><div class="chips">${pinned.map(i=>`<a href="#${i}">${byId[i].title}</a>`).join('')}</div></div>`:''}
+  <div class="sechead"><h2>Browse</h2></div>
+  <div class="tiles">${tiles.map(t=>`<a class="tile" href="${t.h}">${COVER(t.n,t.c,t.k)}</a>`).join('')}</div>
   ${footer()}</div>`;
   ddxInit(V());
+}
+function secView(id){
+  const isCalc=id==='calc',name=isCalc?'Calculators':secName(id),list=isCalc?[...inSec('calc'),...CALC_LINKS.map(i=>byId[i])].filter(Boolean):inSec(id);
+  V().innerHTML=`<div class="wrap">
+  <header class="ebanner"${IMGV(SEC_IMG[id])}><div class="crumb"><a href="#">Index</a></div><div class="ehead"><h1>${name}</h1></div></header>
+  <ul class="seclist">${list.map(e=>`<li><a href="#${e.id}"><b>${e.title}</b><small>${e.ver}</small></a></li>`).join('')}</ul>
+  ${footer()}</div>`;
 }
 function footer(){return `<p class="foot">Radessential summarizes published classification systems for practicing radiologists. Summaries are condensed; confirm details against the cited source before relying on them for patient care.</p>`}
 function entry(e){
@@ -1695,6 +1694,7 @@ function render(h){
   else if(h.startsWith('anatomy-')&&ATLAS_BY[h.slice(8)]){NAV.anat=h.slice(8);anatomyView(h.slice(8))}
   else if(byId[h]){NAV.entry=h;entry(byId[h])}
   else if(h==='ddx'){NAV.tool='ddx';ddxView()}
+  else if(h.startsWith('sec-')&&(h==='sec-calc'||SECTIONS.some(x=>x.id===h.slice(4)))){secView(h.slice(4))}
   else if(h==='cases'||(h.startsWith('cases-')&&CASE_SEC[h.slice(6)])){NAV.caseSec='all';casesSoon()}
   else if(h.startsWith('case-new-')&&CASE_SEC[h.slice(9)]){NAV.caseSec=h.slice(9);caseForm(null,h.slice(9))}
   else if(h.startsWith('case-edit-')){const c=findCase(h.slice(10));NAV.caseSec=c?c.sec:'all';caseForm(h.slice(10))}

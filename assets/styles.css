@@ -434,6 +434,13 @@ body.an-maxed{overflow:hidden}
 .home-ddx>p{margin:6px 0 12px;color:var(--muted)}
 .home-ddx .ddx-warn{font-size:13px;padding:8px 12px;margin-bottom:12px}
 .home-ddx .ddx-comp{position:static;box-shadow:none}.home-ddx .ddx-comp.chat{position:sticky;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+.home .hero2{margin-bottom:22px}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:28px}@media (max-width:760px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}@media (max-width:520px){.tiles{grid-template-columns:1fr;gap:10px}.tile .cover{height:72px}}
+.tile{display:block;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow);text-decoration:none;transition:transform .15s,box-shadow .15s}
+.tile:hover{transform:translateY(-2px)}.tile .cover{height:92px}
+.seclist{list-style:none;padding:0;margin:0 0 24px;display:grid;gap:8px}
+.seclist a{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:12px 16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;text-decoration:none;color:var(--ink)}
+.seclist a:hover{border-color:var(--accent)}.seclist small{color:var(--muted);font-size:12.5px;text-align:right}
 .ddx-thread{display:grid;gap:14px;margin:4px 0 14px}.ddx-thread:empty{display:none}
 .ddx-comp{position:sticky;bottom:12px;z-index:5;display:grid;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
 .ddx-comp.on{border-color:var(--accent);background:var(--accent-soft)}
