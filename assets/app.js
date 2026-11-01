@@ -252,7 +252,7 @@ refs:[{c:'Som PM, Curtin HD, Mancuso AA. An imaging-based classification for the
 
 add({id:'le-fort',sec:'hn',title:'Le Fort fractures',alias:'lefort midface maxillary fracture pterygoid craniofacial disjunction',ver:'Rhea & Novelline 2005',tags:['CT','Trauma'],
 lede:'All three types disrupt the pterygoid plates. Each has one fracture unique to it, which makes CT identification fast. Types frequently coexist and may differ side to side.',
-body:`${ILLUS(['fig-lefort-overview','Le Fort I, II and III planes on one skull'],['fig-lefort-stock','Le Fort I–III fracture lines. Stock illustration preview, Dreamstime #24901408'],['fig-lefort-1','Le Fort I: horizontal maxillary fracture'],['fig-lefort-2','Le Fort II: pyramidal fracture'],['fig-lefort-3','Le Fort III: craniofacial disjunction'])}${T(['Type','Pattern','Unique component','Mobile segment'],[
+body:`${ILLUS(['fig-lefort-overview','Le Fort I, II and III planes on one skull'],['fig-lefort-1','Le Fort I: horizontal maxillary fracture'],['fig-lefort-2','Le Fort II: pyramidal fracture'],['fig-lefort-3','Le Fort III: craniofacial disjunction'])}${T(['Type','Pattern','Unique component','Mobile segment'],[
  ['I','Horizontal through maxilla above the alveolar ridge','Anterolateral margin of the nasal fossa (piriform aperture)','Palate + alveolar process ("floating palate")'],
  ['II','Pyramidal: nasofrontal junction, medial orbit, inferior orbital rim, zygomaticomaxillary region','Inferior orbital rim','Maxilla + nose ("floating maxilla")'],
  ['III','Transverse craniofacial disjunction: nasofrontal junction, medial and lateral orbital walls, zygomatic arch','Zygomatic arch','Entire midface ("floating face")']])}
