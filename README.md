@@ -15,6 +15,7 @@ The site is plain HTML, CSS and JavaScript. There is no framework and no databas
 | `img/` | Section covers, flowcharts, figures, logo | Add files on GitHub |
 | `index.html` | Page shell and header | Rarely needs changes |
 | `scripts/build.mjs` | Build step: copies the site to `dist/` and compiles cases | Leave as is |
+| `viewer/src/` | DICOM viewer source; bundled to `assets/viewer/` | Ask Claude, then `npm run build:viewer` |
 | `scripts/seo.mjs` | Build step: one page per entry with its own title, description and preview tags, plus `sitemap.xml` and `robots.txt` | Leave as is |
 | `.pages.yml` | Pages CMS form for cases | Leave as is unless you add case fields |
 
@@ -86,6 +87,19 @@ npm run preview
 ```
 
 Then open the address it prints.
+
+## DICOM viewer
+
+`radessential.com/viewer` opens DICOM files in the browser. Files never leave the user's device. It handles uncompressed, RLE, JPEG (8- and 12-bit), JPEG Lossless, JPEG-LS and JPEG 2000 data, multi-frame and colour images.
+
+The source is in `viewer/src/`. The site serves a bundled copy from `assets/viewer/`, so the normal site build needs nothing extra. After changing anything in `viewer/src/`, rebuild the bundle and commit it:
+
+```
+npm install
+npm run build:viewer
+```
+
+Third-party code and licences: `viewer/THIRD_PARTY.md`.
 
 ## Page addresses and search engines
 

@@ -4,9 +4,17 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "preview": "npm run build && npx --yes serve dist"
+    "preview": "npm run build && npx --yes serve dist",
+    "build:viewer": "node scripts/build-viewer.mjs"
   },
   "dependencies": {
     "js-yaml": "4.1.0"
+  },
+  "devDependencies": {
+    "@cornerstonejs/codec-charls": "1.2.7",
+    "@cornerstonejs/codec-openjpeg": "1.3.6",
+    "dicom-parser": "1.8.21",
+    "esbuild": "0.28.2",
+    "jpeg-lossless-decoder-js": "2.1.2"
   }
 }

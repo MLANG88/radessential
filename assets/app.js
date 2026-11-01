@@ -889,6 +889,7 @@ function renderNav(){
   const grp=(id,name,list,isCur)=>`<details class="grp" data-sec="${id}"${openSecs.includes(id)?' open':''}><summary><span>${name}</span><span class="cnt">${list.length}</span>${chev}</summary><div class="items">${list.map(e=>`<a href="#${e.id}" class="${isCur(e)?'cur':''}">${e.title}</a>`).join('')}</div></details>`;
   let h=`<a class="home${!cur&&!NAV.caseSec&&!NAV.anat&&!NAV.tool?' cur':''}" href="#">Index</a><div class="navtools"><button type="button" id="expAll">Expand all</button><button type="button" id="colAll">Collapse all</button></div>`;
   h+=`<a class="tool-link${NAV.tool==='ddx'?' cur':''}" href="#ddx"><span>Differential generator</span><span class="soon">AI</span></a>`;
+  h+=`<a class="tool-link${NAV.tool==='viewer'?' cur':''}" href="#viewer"><span>DICOM viewer</span><span class="soon">New</span></a>`;
   h+=`<details class="grp atlas-grp" data-sec="anatomy"${openSecs.includes('anatomy')?' open':''}><summary><span>Atlas</span><span class="cnt">${ATLAS.length}</span>${chev}</summary><div class="items">${ATLAS.map(a=>`<a href="#anatomy-${a.id}" class="${NAV.anat===a.id?'cur':''}">${a.title}</a>`).join('')}</div></details>`;
   if(pins.length)h+=grp('pinned','Pinned',pins.filter(id=>byId[id]).map(id=>byId[id]),e=>e.id===cur);
   {const list=[...inSec('calc'),...CALC_LINKS.map(i=>byId[i])];h+=grp('calc','Calculators',list,e=>e.id===cur&&e.sec==='calc').replace('class="grp"','class="grp calc-grp"')}
@@ -985,6 +986,26 @@ function ddxView(){
   ${ddxBlock()}
   ${footer()}</div>`;
   ddxInit(v);
+}
+/* ---------- DICOM viewer (viewer/src, bundled to assets/viewer) ---------- */
+let VIEWER=null;
+function viewerView(){
+  const v=V();
+  v.innerHTML=`<div class="wrap wide dv-page">
+  <header class="dv-head"><div class="crumb"><a href="#">Index</a> / Tools</div><h1>DICOM viewer</h1>
+  <p>Open CT, MR, radiograph or ultrasound files straight from a CD, PACS export or folder. Files stay on your device; nothing is uploaded. For education and teaching, not for diagnosis.</p></header>
+  <div id="dv-root"><p class="empty">Loading viewer…</p></div>
+  <details class="dv-help"><summary>Controls</summary><div class="tw"><table><tbody>
+  <tr><td class="k">Scroll images</td><td>Mouse wheel, arrow keys, the slider, or the scroll tool. Page Up/Down jumps 10.</td></tr>
+  <tr><td class="k">Window/level</td><td>Drag with the window/level tool: left–right for width, up–down for level. Number keys 1–9 pick CT presets.</td></tr>
+  <tr><td class="k">Zoom and pan</td><td>Ctrl/⌘ + wheel or right-drag to zoom; Shift-drag or middle-drag to pan. Pinch and two-finger drag on touch screens.</td></tr>
+  <tr><td class="k">Measure</td><td>Choose the ruler and drag. Lengths use the file's pixel spacing; images without it show pixels.</td></tr>
+  <tr><td class="k">Other keys</td><td>I invert · R reset · Space play/stop · F full screen</td></tr>
+  </tbody></table></div><p class="note">Patient name, ID and dates are hidden until you press <b>Patient info</b>. Use de-identified images when teaching or sharing your screen.</p></details>
+  ${footer()}</div>`;
+  import(new URL('assets/viewer/viewer.js',document.baseURI).href)
+    .then(mod=>{if(curRoute()!=='viewer'||VIEWER)return;VIEWER=mod.mount(v.querySelector('#dv-root'))})
+    .catch(()=>{const r=v.querySelector('#dv-root');if(r)r.innerHTML='<p class="empty">The viewer could not load. Reload the page to try again.</p>'});
 }
 function ddxBlock(){return `<div class="ddx-warn"><b>Educational aid, not a diagnosis.</b> Output comes from an open AI model and can be wrong or incomplete. Verify against the images, the clinical picture and primary sources. Do not enter names, dates, record numbers or other identifiers, and upload only de-identified images.</div>
   <div class="ddx-thread" id="dx-thread"></div>
@@ -1695,10 +1716,12 @@ let lastHash=null;
 function render(h){
   NAV={entry:null,caseSec:null,anat:null};
   if(ANAT){ANAT.destroy&&ANAT.destroy();ANAT=null}
+  if(VIEWER){VIEWER.destroy();VIEWER=null}
   if(h==='anatomy'){NAV.anat='home';anatomyHome()}
   else if(h.startsWith('anatomy-')&&ATLAS_BY[h.slice(8)]){NAV.anat=h.slice(8);anatomyView(h.slice(8))}
   else if(byId[h]){NAV.entry=h;entry(byId[h])}
   else if(h==='ddx'){NAV.tool='ddx';ddxView()}
+  else if(h==='viewer'){NAV.tool='viewer';viewerView()}
   else if(h.startsWith('sec-')&&(h==='sec-calc'||SECTIONS.some(x=>x.id===h.slice(4)))){secView(h.slice(4))}
   else if(h==='cases'||(h.startsWith('cases-')&&CASE_SEC[h.slice(6)])){NAV.caseSec='all';casesSoon()}
   else if(h.startsWith('case-new-')&&CASE_SEC[h.slice(9)]){NAV.caseSec=h.slice(9);caseForm(null,h.slice(9))}

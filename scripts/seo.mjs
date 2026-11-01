@@ -63,7 +63,7 @@ export function writeSeo(root, dist) {
   // A static index of every page, placed in the side nav until the app draws its own.
   const navHtml = `<a class="home" href="/">Index</a>` + SECTIONS.map(s => `<div class="navh"><a href="/sec-${s.id}">${esc(secName(s.id))}</a></div><div class="items">${inSec(s.id).map(e => `<a href="/${e.id}">${e.title}</a>`).join('')}</div>`).join('')
     + `<div class="navh"><a href="/anatomy">Atlas</a></div><div class="items">${atlas.map(a => `<a href="/anatomy-${a.id}">${esc(a.title)}</a>`).join('')}</div>`
-    + `<div class="navh"><a href="/ddx">Differential generator</a></div>`;
+    + `<div class="navh"><a href="/ddx">Differential generator</a></div><div class="navh"><a href="/viewer">DICOM viewer</a></div>`;
 
   const page = (file, tags, main) => {
     const html = shell.replace(/<!--seo[\s\S]*?<!--\/seo-->\n?/, tags)
@@ -132,6 +132,8 @@ ${FOOT}</article>`);
   }
   page('ddx.html', head({ title: `Radiology differential generator | ${NAME}`, desc: 'Describe imaging findings and get a ranked radiology differential diagnosis with discriminating features. Educational aid.', route: 'ddx' }), '');
   urls.push('ddx');
+  page('viewer.html', head({ title: `Free online DICOM viewer | ${NAME}`, desc: 'View CT, MR, radiograph and ultrasound DICOM files in your browser. Scroll, window/level, zoom and measure. Files stay on your device; nothing is uploaded.', route: 'viewer' }), '');
+  urls.push('viewer');
 
   fs.writeFileSync(path.join(dist, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
