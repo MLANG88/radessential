@@ -1,7 +1,9 @@
-// Builds dist/: copies the site and compiles content/cases/*.yml into dist/data/cases.json.
+// Builds dist/: copies the site, compiles content/cases/*.yml into dist/data/cases.json,
+// and writes one HTML page per route plus sitemap.xml and robots.txt (scripts/seo.mjs).
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
+import { writeSeo } from './seo.mjs';
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const dist = path.join(root, 'dist');
@@ -41,4 +43,5 @@ for (const file of files) {
 }
 fs.writeFileSync(path.join(dist, 'data', 'cases.json'), JSON.stringify(cases));
 console.log(`✓ Built ${cases.length} case(s) into dist/`);
+console.log(`✓ Wrote ${writeSeo(root, dist)} search-engine pages, sitemap.xml and robots.txt`);
 if (problems) { console.error(`${problems} case file(s) had problems and were left out.`); }

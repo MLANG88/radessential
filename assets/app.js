@@ -824,6 +824,11 @@ refs:[{c:'Turkbey B, Rosenkrantz AB, Haider MA, et al. Prostate Imaging Reportin
 /* cross-list existing calculators in the Calculators section */
 const CALC_LINKS=['aspects','tirads','lirads','pirads','spetzler-martin','ctsi','adrenal','carotid-us'];
 
+/* ---------- routing: real paths (radessential.com/le-fort) on the static site, #hash inside claude.ai ---------- */
+const PATHS=!!window.RAD_STATIC;
+const curRoute=()=>PATHS?decodeURIComponent(location.pathname).replace(/^\/+|\/+$/g,'').replace(/\.html$/,'').replace(/^index$/,''):location.hash.slice(1);
+const go=h=>{if(PATHS){history.pushState(null,'','/'+h);route()}else location.hash=h};
+
 /* ---------- state ---------- */
 const store={get(k,d){try{const v=localStorage.getItem('rad.'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem('rad.'+k,JSON.stringify(v))}catch(e){}}};
 let pins=store.get('pins',[]),recent=store.get('recent',[]);
@@ -866,7 +871,7 @@ const errMsg=e=>(e&&(e.message||e.code))||'Something went wrong.';
 })();
 function onCases(){
   renderNav();
-  const h=location.hash.slice(1);
+  const h=curRoute();
   const isForm=h.startsWith('case-new-')||h.startsWith('case-edit-');
   if(isForm){if(!FORM)render(h);return}
   if(h===''||h==='cases'||h.startsWith('cases-')||h.startsWith('case-'))render(h);
@@ -1142,7 +1147,7 @@ function caseView(id){
       ev.currentTarget.disabled=true;v.querySelector('#delSt').textContent='Deleting…';
       try{await dbNS.collection('cases').doc(c.id).delete();
         for(const im of imgs){try{await assetsNS.delete(im.id)}catch(e){}}
-        location.hash='cases-'+c.sec;
+        go('cases-'+c.sec);
       }catch(e){v.querySelector('#delSt').textContent='Not deleted: '+errMsg(e);ev.currentTarget.disabled=false}};
   }
 }
@@ -1205,7 +1210,7 @@ function caseForm(id,sec){
   drop.addEventListener('dragleave',()=>drop.classList.remove('over'));
   drop.addEventListener('drop',ev=>{ev.preventDefault();drop.classList.remove('over');upload([...ev.dataTransfer.files])});
   drawImgs();
-  v.querySelector('#cf-cancel').onclick=()=>{location.hash=orig?'case-'+orig.id:'cases-'+d.sec};
+  v.querySelector('#cf-cancel').onclick=()=>{go(orig?'case-'+orig.id:'cases-'+d.sec)};
   v.querySelector('#cf').addEventListener('submit',async ev=>{
     ev.preventDefault();
     const val=k=>v.querySelector('#cf-'+k).value.trim();
@@ -1225,7 +1230,7 @@ function caseForm(id,sec){
       const dropped=[...(orig&&orig.images||[]).map(im=>im.id),...FORM.uploaded].filter(x=>!keep.has(x));
       FORM=null;
       for(const a of new Set(dropped)){try{await assetsNS.delete(a)}catch(e){}}
-      location.hash='case-'+cid;
+      go('case-'+cid);
     }catch(e){btn.disabled=false;st.textContent='Not saved: '+errMsg(e)}
   });
 }
@@ -1700,10 +1705,11 @@ function render(h){
   else if(h.startsWith('case-edit-')){const c=findCase(h.slice(10));NAV.caseSec=c?c.sec:'all';caseForm(h.slice(10))}
   else if(h.startsWith('case-')){const c=findCase(h.slice(5));NAV.caseSec=c?c.sec:'all';caseView(h.slice(5))}
   else home();
+  document.title=byId[h]?`${byId[h].title} | RadEssential`:'RadEssential: radiology quick reference';
   renderNav();
 }
 function route(){
-  const h=location.hash.slice(1);
+  const h=curRoute();
   if(h===lastHash)return;lastHash=h;
   if(FORM)discardForm();
   lb.hidden=true;
@@ -1724,12 +1730,29 @@ function search(s){
   return [...base,...cidx].map(x=>{let sc=0;for(const t of terms){if(x.t.startsWith(t))sc+=6;else if(x.t.includes(t))sc+=4;else if(x.a.includes(t))sc+=2;else return null}return{e:x.e,sc}}).filter(Boolean).sort((a,b)=>b.sc-a.sc).slice(0,10).map(x=>x.e)}
 function drawRes(){if(!q.value.trim()){res.hidden=true;return}res.hidden=false;res.innerHTML=hits.length?hits.map((e,i)=>`<a href="#${esc(e.id)}" class="${i===sel?'on':''}">${e.title}<span>${esc(e.label)}</span></a>`).join(''):`<div class="none">No match. Try a system name, organ or eponym.</div>`}
 q.addEventListener('input',()=>{hits=search(q.value);sel=0;drawRes()});
-q.addEventListener('keydown',ev=>{if(ev.key==='ArrowDown'){sel=Math.min(sel+1,hits.length-1);drawRes();ev.preventDefault()}else if(ev.key==='ArrowUp'){sel=Math.max(sel-1,0);drawRes();ev.preventDefault()}else if(ev.key==='Enter'&&hits[sel]){location.hash=hits[sel].id;q.value='';res.hidden=true;q.blur()}else if(ev.key==='Escape'){q.value='';res.hidden=true;q.blur()}});
+q.addEventListener('keydown',ev=>{if(ev.key==='ArrowDown'){sel=Math.min(sel+1,hits.length-1);drawRes();ev.preventDefault()}else if(ev.key==='ArrowUp'){sel=Math.max(sel-1,0);drawRes();ev.preventDefault()}else if(ev.key==='Enter'&&hits[sel]){go(hits[sel].id);q.value='';res.hidden=true;q.blur()}else if(ev.key==='Escape'){q.value='';res.hidden=true;q.blur()}});
 res.addEventListener('click',ev=>{if(ev.target.closest('a')){q.value='';res.hidden=true}});
 document.addEventListener('click',ev=>{if(!ev.target.closest('.search'))res.hidden=true});
 document.addEventListener('keydown',ev=>{if(ev.key==='/'&&document.activeElement!==q&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)){ev.preventDefault();q.focus()}});
 document.getElementById('menuBtn').onclick=()=>document.body.classList.toggle('navopen');
 document.getElementById('nav').addEventListener('click',ev=>{if(ev.target.closest('a'))document.body.classList.remove('navopen')});
 
-window.addEventListener('hashchange',route);
+if(PATHS){
+  // Old #links (radessential.com/#le-fort) keep working and become real paths.
+  const toPath=()=>{if(location.hash.length>1)history.replaceState(null,'','/'+location.hash.slice(1))};
+  toPath();
+  const fixA=a=>a.setAttribute('href','/'+a.getAttribute('href').slice(1));
+  const fix=n=>{if(n.nodeType!==1)return;if(n.matches('a[href^="#"]'))fixA(n);n.querySelectorAll('a[href^="#"]').forEach(fixA)};
+  fix(document.body);
+  new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(fix))).observe(document.body,{childList:true,subtree:true});
+  document.addEventListener('click',ev=>{
+    if(ev.defaultPrevented||ev.button!==0||ev.metaKey||ev.ctrlKey||ev.shiftKey||ev.altKey)return;
+    const a=ev.target.closest('a[href]');if(!a||a.target||a.hasAttribute('download'))return;
+    const u=new URL(a.getAttribute('href'),location.href);if(u.origin!==location.origin)return;
+    const p=u.pathname.replace(/^\/+|\/+$/g,'');if(p.includes('/')||/\.[a-z0-9]+$/i.test(p))return;
+    ev.preventDefault();if(u.pathname!==location.pathname)history.pushState(null,'',u.pathname);route();
+  });
+  window.addEventListener('popstate',route);
+  window.addEventListener('hashchange',()=>{toPath();route()});
+}else window.addEventListener('hashchange',route);
 route();

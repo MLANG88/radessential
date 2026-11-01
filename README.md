@@ -15,6 +15,7 @@ The site is plain HTML, CSS and JavaScript. There is no framework and no databas
 | `img/` | Section covers, flowcharts, figures, logo | Add files on GitHub |
 | `index.html` | Page shell and header | Rarely needs changes |
 | `scripts/build.mjs` | Build step: copies the site to `dist/` and compiles cases | Leave as is |
+| `scripts/seo.mjs` | Build step: one page per entry with its own title, description and preview tags, plus `sitemap.xml` and `robots.txt` | Leave as is |
 | `.pages.yml` | Pages CMS form for cases | Leave as is unless you add case fields |
 
 ## One-time setup
@@ -85,6 +86,12 @@ npm run preview
 ```
 
 Then open the address it prints.
+
+## Page addresses and search engines
+
+Every entry has its own address, such as `radessential.com/le-fort` or `radessential.com/sec-neuro`. Old links like `radessential.com/#le-fort` still work and switch to the new form.
+
+The build writes a real HTML page for each address, with the entry's content already in it, so Google can index each classification separately. Titles and descriptions come from the entry's `title` and `lede`, so there is nothing extra to fill in when you add an entry. `sitemap.xml` updates on every build; submit `https://radessential.com/sitemap.xml` once in Google Search Console.
 
 ## Atlas data
 
