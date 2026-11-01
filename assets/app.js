@@ -909,6 +909,9 @@ function home(){
   const quick=['neck-nodes','le-fort','fleischner','bosniak','lirads','tirads','aspects'].filter(i=>byId[i]);
   const nCases=casesState==='ready'?CASES.length:'';
   V().innerHTML=`<div class="wrap wide">
+  <section class="home-ddx"><div class="home-ddx-h"><h2>Differential generator <span class="soon">AI</span></h2><a href="#ddx">Open full page →</a></div>
+  <p>Describe the findings, add images if you like, and get a ranked differential with Radiopaedia links. Keep chatting to refine it.</p>
+  ${ddxBlock()}</section>
   <section class="hero2">
     <div>
       <span class="eyebrow">Reading-room reference</span>
@@ -928,6 +931,7 @@ function home(){
   <div class="anat-cards">${ATLAS.map(a=>`<a class="csec" href="#anatomy-${a.id}">${COVER(a.title,'',a.img)}<span class="anat-sub">${a.sub}</span></a>`).join('')}</div>
   <div class="sechead"><h2>Cases</h2><span class="soon-t">Coming soon</span></div>
   ${footer()}</div>`;
+  ddxInit(V());
 }
 function footer(){return `<p class="foot">Radessential summarizes published classification systems for practicing radiologists. Summaries are condensed; confirm details against the cited source before relying on them for patient care.</p>`}
 function entry(e){
@@ -974,7 +978,11 @@ function ddxView(){
   <header class="ebanner"${IMGV('brain')}><div class="crumb"><a href="#">Index</a> / Tools</div>
   <div class="ehead"><h1>Differential generator</h1></div><div class="meta"><span class="tag v">AI assisted</span><span class="tag">Chat · free text · optional images</span></div></header>
   <p class="lede">Describe the case and get a ranked differential. Then keep chatting: add new findings, history, labs or images, or ask a question, and the differential updates.</p>
-  <div class="ddx-warn"><b>Educational aid, not a diagnosis.</b> Output comes from an open AI model and can be wrong or incomplete. Verify against the images, the clinical picture and primary sources. Do not enter names, dates, record numbers or other identifiers, and upload only de-identified images.</div>
+  ${ddxBlock()}
+  ${footer()}</div>`;
+  ddxInit(v);
+}
+function ddxBlock(){return `<div class="ddx-warn"><b>Educational aid, not a diagnosis.</b> Output comes from an open AI model and can be wrong or incomplete. Verify against the images, the clinical picture and primary sources. Do not enter names, dates, record numbers or other identifiers, and upload only de-identified images.</div>
   <div class="ddx-thread" id="dx-thread"></div>
   <form class="ddx-comp" id="ddx-form" autocomplete="off">
     <div class="ddx-thumbs" id="dx-thumbs"></div>
@@ -987,8 +995,8 @@ function ddxView(){
       <button type="button" class="btn" id="dx-clear" hidden>New case</button>
       <button type="submit" class="btn pri" id="dx-go">Generate differential</button>
     </div>
-  </form>
-  ${footer()}</div>`;
+  </form>`}
+function ddxInit(v){
   const $=s=>v.querySelector(s);
   const MAXIMG=4,turns=[];let pend=[];   // turns: {role:'user'|'assistant', text, images?}
   const used=()=>turns.reduce((n,t)=>n+(t.images?t.images.length:0),0);
