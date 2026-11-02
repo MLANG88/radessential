@@ -1,14 +1,17 @@
 """Brain vessel atlas from the TopBrain 2025 challenge release (USZ; open use, non-commercial, attribution).
-Usage: python3 prep_tb.py <mr|ct> <case id> <out stem>
+Usage: python3 prep_tb.py <mr|ct> <case id> <out stem> [resliced image] [resliced labels]
+The optional resliced files come from scripts/atlas/realign.py (rigid alignment to MNI ICBM152 so axial, coronal and sagittal are true anatomical planes).
 """
 import sys, json, numpy as np, nibabel as nib
 from scipy import ndimage as ndi
 
 mod, cid, stem = sys.argv[1], sys.argv[2], sys.argv[3]
 R = '/tmp/claude-0/tb/TopBrain_Data_Release_Batches1n2_081425'
-img_i = nib.as_closest_canonical(nib.load(f'{R}/imagesTr_topbrain_{mod}/topcow_{mod}_{cid}_0000.nii.gz'))
+IMG = sys.argv[4] if len(sys.argv) > 4 else f'{R}/imagesTr_topbrain_{mod}/topcow_{mod}_{cid}_0000.nii.gz'
+LAB = sys.argv[5] if len(sys.argv) > 5 else f'{R}/labelsTr_topbrain_{mod}/topcow_{mod}_{cid}.nii.gz'
+img_i = nib.as_closest_canonical(nib.load(IMG))
 img = img_i.get_fdata().astype(np.float32)
-lab = np.asarray(nib.as_closest_canonical(nib.load(f'{R}/labelsTr_topbrain_{mod}/topcow_{mod}_{cid}.nii.gz')).dataobj).astype(np.int16)
+lab = np.asarray(nib.as_closest_canonical(nib.load(LAB)).dataobj).astype(np.int16)
 zooms = [float(z) for z in img_i.header.get_zooms()[:3]]
 names = {}
 for line in open(f'{R}/itksnap_labelmap_txt/labelmap_topbrain_{mod}.txt'):

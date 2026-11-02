@@ -1262,7 +1262,7 @@ const ATLAS=[
   credit:'Images and expert vessel labels: TopBrain 2025 challenge data (University Hospital Zurich; TopCoW/TopBrain challenge organisers), open use for non-commercial purposes with attribution. Circle of Willis complete in this case.'},
  {id:'cta-brain',minMM:3,title:'CTA head vessels',sub:'CT angiography · 0.5 mm · arteries, deep veins and sinuses',img:'atlas-cta',mip:[10,20],
   presets:[['Angio',700,200],['Brain',80,40],['Bone',2800,600]],defCats:['ant','post','comm','eca','vein'],start:'Basilar artery',
-  credit:'Images and expert vessel labels: TopBrain 2025 challenge data (University Hospital Zurich; TopCoW/TopBrain challenge organisers), open use for non-commercial purposes with attribution. '},
+  credit:'Images and expert vessel labels: TopBrain 2025 challenge data (University Hospital Zurich; TopCoW/TopBrain challenge organisers), open use for non-commercial purposes with attribution. Volume realigned to the MNI ICBM152 template so axial, coronal and sagittal views are true anatomical planes. '},
  {id:'mri-brain',title:'MRI brain',sub:'T1- and T2-weighted MNI ICBM152 template · 1 mm · 97 regions',img:'atlas-brain',
   presets:[['T1',235,120],['Grey–white',150,150],['Full range',255,128]],
   series:[{name:'T1',key:'ct',presets:[['Standard',235,120],['Grey–white contrast',150,150]]},{name:'T2',key:'img2',presets:[['Standard',240,125],['Grey–white contrast',150,110]]}],defCats:['frontal','parietal','temporal','occipital','limbic','insula','deep','csf','cereb','stem'],start:'Left hippocampus',
