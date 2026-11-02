@@ -6,7 +6,7 @@ import sys, json, numpy as np, nibabel as nib
 from scipy import ndimage as ndi
 
 mod, cid, stem = sys.argv[1], sys.argv[2], sys.argv[3]
-R = '/tmp/claude-0/tb/TopBrain_Data_Release_Batches1n2_081425'
+R = '/tmp/claude-0/tbct/TopBrain_Data_Release_Batches1n2_081425'
 IMG = sys.argv[4] if len(sys.argv) > 4 else f'{R}/imagesTr_topbrain_{mod}/topcow_{mod}_{cid}_0000.nii.gz'
 LAB = sys.argv[5] if len(sys.argv) > 5 else f'{R}/labelsTr_topbrain_{mod}/topcow_{mod}_{cid}.nii.gz'
 img_i = nib.as_closest_canonical(nib.load(IMG))

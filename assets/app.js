@@ -1286,8 +1286,8 @@ const ATLAS=[
  {id:'mra-brain',minMM:2,title:'MRA brain arteries',sub:'3D time-of-flight MRA · 0.3 mm · 40 named arteries',img:'atlas-mra',mip:[10,20],
   presets:[['Standard',255,128],['Vessels',170,170]],defCats:['ant','post','comm','eca'],start:'Anterior communicating artery',
   credit:'Images and expert vessel labels: TopBrain 2025 challenge data (University Hospital Zurich; TopCoW/TopBrain challenge organisers), open use for non-commercial purposes with attribution. Circle of Willis complete in this case.'},
- {id:'cta-brain',minMM:3,title:'CTA head vessels',sub:'CT angiography · 0.5 mm · arteries, deep veins and sinuses',img:'atlas-cta',mip:[10,20],
-  presets:[['Angio',700,200],['Brain',80,40],['Bone',2800,600]],defCats:['ant','post','comm','eca','vein'],start:'Basilar artery',
+ {id:'cta-brain',minMM:3,title:'CTA head vessels',sub:'CT angiography · 0.43 mm · arteries, deep veins and sinuses',img:'atlas-cta',mip:[10,20],mipDef:10,
+  presets:[['Angio',700,200],['Brain',80,40],['Bone',2800,600]],defCats:['ant','post','comm','eca','vein'],start:'Anterior communicating artery',
   credit:'Images and expert vessel labels: TopBrain 2025 challenge data (University Hospital Zurich; TopCoW/TopBrain challenge organisers), open use for non-commercial purposes with attribution. Volume realigned to the MNI ICBM152 template so axial, coronal and sagittal views are true anatomical planes. '},
  {id:'mri-brain',title:'MRI brain',sub:'T1- and T2-weighted MNI ICBM152 template · 1 mm · 97 regions',img:'atlas-brain',
   presets:[['T1',235,120],['Grey–white',150,150],['Full range',255,128]],
@@ -1401,7 +1401,7 @@ function anatomyView(id){
     <div class="seg" role="group" aria-label="Plane" id="an-planes"></div>
     ${A.series?`<div class="seg" role="group" aria-label="Sequence">${A.series.map((x,i)=>`<button type="button" data-ser="${i}" aria-pressed="${i===0}">${x.name}</button>`).join('')}</div>`:''}
     <div class="seg" role="group" aria-label="Window" id="an-wins"></div>
-    ${A.mip?`<div class="seg" role="group" aria-label="Projection">${[[0,'Slice'],...A.mip.map(m=>[m,`MIP ${m} mm`])].map(([m,t])=>`<button type="button" data-mip="${m}" aria-pressed="${!m}">${t}</button>`).join('')}</div>`:''}
+    ${A.mip?`<div class="seg" role="group" aria-label="Projection">${[[0,'Slice'],...A.mip.map(m=>[m,`MIP ${m} mm`])].map(([m,t])=>`<button type="button" data-mip="${m}" aria-pressed="${m===(A.mipDef||0)}">${t}</button>`).join('')}</div>`:''}
     <div class="seg" role="group" aria-label="Labels"><button type="button" data-lab="all" aria-pressed="true">All labels</button><button type="button" data-lab="hover" aria-pressed="false">Hover only</button></div>
     <button type="button" class="btn" id="an-quiz" aria-pressed="false">Quiz me</button>
     <button type="button" class="btn an-max" id="an-max" aria-pressed="false" title="Expand the viewer (F)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg><span>Expand</span></button>
@@ -1428,7 +1428,7 @@ function anatomyView(id){
   <p class="foot">${A.credit} Scroll with the mouse wheel, arrow keys or a vertical drag. Keys: A/C/S planes, F expand, L labels, Q quiz, 1–4 windows.</p>
   </div>`;
   const PR=()=>A.series?A.series[st.ser].presets:A.presets;
-  const st={id,A,ser:0,pi:0,pos:[0,0,0],win:0,labels:'all',hover:0,sel:0,quiz:null,cats:new Set(A.defCats),D:null,score:[0,0],max:false};
+  const st={id,A,ser:0,pi:0,pos:[0,0,0],win:0,labels:'all',hover:0,sel:0,quiz:null,cats:new Set(A.defCats),D:null,score:[0,0],max:false,mip:A.mipDef||0};
   ANAT=st;
   const $=s=>v.querySelector(s);
   const root=$('.anat'),cv=$('#an-cv'),ctx=cv.getContext('2d'),stage=$('#an-stage'),tip=$('#an-tip'),sc=$('#an-scout'),rng=$('#an-range');
