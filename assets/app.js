@@ -1000,7 +1000,7 @@ function viewerView(){
   <tr><td class="k">Window/level</td><td>Drag with the window/level tool: left–right for width, up–down for level. Number keys 1–9 pick CT presets.</td></tr>
   <tr><td class="k">Zoom and pan</td><td>Ctrl/⌘ + wheel or right-drag to zoom; Shift-drag or middle-drag to pan. Pinch and two-finger drag on touch screens.</td></tr>
   <tr><td class="k">Measure</td><td>Choose the ruler and drag. Lengths use the file's pixel spacing; images without it show pixels.</td></tr>
-  <tr><td class="k">Compare studies</td><td><b>Compare study</b> loads a second study into a right-hand pane (or drop it onto that pane). Click a pane to select it; series you pick on the left open there. <b>Link scroll</b> moves both panes together; to realign, turn it off, line up the slices, and turn it on again.</td></tr>
+  <tr><td class="k">Compare studies</td><td><b>Compare study</b> loads a second study, as a folder or files, into a right-hand pane (or drop the folder onto that pane). Click a pane to select it; series you pick on the left open there. <b>Link scroll</b> moves both panes together; to realign, turn it off, line up the slices, and turn it on again.</td></tr>
   <tr><td class="k">Full screen</td><td><b>Full screen</b> or F; press the same button (now <b>Exit full screen</b>), F or Esc to return.</td></tr>
   <tr><td class="k">Other keys</td><td>I invert · R reset · Space play/stop · C side by side · L link scroll · Tab switch pane</td></tr>
   </tbody></table></div><p class="note">Patient name, ID and dates are hidden until you press <b>Patient info</b>. Use de-identified images when teaching or sharing your screen.</p></details>

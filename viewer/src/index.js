@@ -59,13 +59,15 @@ export function mount(root) {
         <button type="button" class="dv-btn" id="dv-info" aria-pressed="false" title="Show patient name, ID and dates">Patient info</button>
       </div>
       <div class="dv-grp dv-cmp">
-        <button type="button" class="dv-btn" id="dv-compare" title="Load another study and show it side by side">Compare study</button>
+        <span class="dv-mwrap"><button type="button" class="dv-btn" id="dv-compare" aria-haspopup="menu" aria-expanded="false" title="Load another study and show it side by side">Compare study ▾</button>
+          <span class="dv-menu" role="menu" hidden><button type="button" role="menuitem" data-pick="cdir">Choose a folder</button><button type="button" role="menuitem" data-pick="cfiles">Choose files</button></span></span>
         <button type="button" class="dv-btn" id="dv-layout" aria-pressed="false" title="Show one or two viewports (C)">Side by side</button>
         <button type="button" class="dv-btn" id="dv-link" aria-pressed="true" title="Scroll both viewports together (L)" hidden>Link scroll</button>
       </div>
       <div class="dv-grp dv-end">
         <button type="button" class="dv-btn dv-fsbtn" id="dv-fs" aria-pressed="false" title="Full screen (F)">${svg('fs')}<span>Full screen</span></button>
-        <button type="button" class="dv-btn" id="dv-add">Add files</button><button type="button" class="dv-btn" id="dv-close">Close all</button>
+        <span class="dv-mwrap"><button type="button" class="dv-btn" id="dv-add" aria-haspopup="menu" aria-expanded="false" title="Add more series from the same or another study">Add files ▾</button>
+          <span class="dv-menu" role="menu" hidden><button type="button" role="menuitem" data-pick="dir">Choose a folder</button><button type="button" role="menuitem" data-pick="files">Choose files</button></span></span><button type="button" class="dv-btn" id="dv-close">Close all</button>
       </div>
     </div>
     <div class="dv-main">
@@ -455,7 +457,7 @@ export function mount(root) {
     vp.q('.dv-slider').oninput = e => { if (S.active !== vp.n) setActive(vp.n); setImage(vp, +e.target.value); };
     vp.el.addEventListener('pointerdown', () => { if (S.active !== vp.n) setActive(vp.n); });
   }
-  stage.addEventListener('click', e => { if (e.target.closest('[data-act="compare-load"]')) $('#dv-cfiles').click(); });
+  stage.addEventListener('click', e => { if (e.target.closest('[data-act="compare-load"]')) $('#dv-cdir').click(); });
   $('#dv-preset').onchange = e => {
     const vp = A(), v = e.target.value, img = curOf(vp); if (!img || v === '') return;
     getDecoded(img).then(d => {
@@ -477,7 +479,15 @@ export function mount(root) {
   $('#dv-inv').onclick = toggleInvert; $('#dv-reset').onclick = reset; $('#dv-play').onclick = togglePlay;
   $('#dv-clear').onclick = () => { const vp = A(); for (const k of [...S.measures.keys()]) if (k.startsWith(vp.si + ':')) S.measures.delete(k); VPS.forEach(o => draw(o, curOf(o)?.f)); };
   $('#dv-info').onclick = e => { S.showInfo = !S.showInfo; e.currentTarget.setAttribute('aria-pressed', S.showInfo); VPS.forEach(updateOverlay); renderSeriesList(); };
-  $('#dv-compare').onclick = () => $('#dv-cfiles').click();
+  // Folder-or-files menus for "Compare study" and "Add files". DICOM usually arrives as a folder, so that comes first.
+  const closeMenus = () => root.querySelectorAll('.dv-menu').forEach(m => { m.hidden = true; m.previousElementSibling.setAttribute('aria-expanded', 'false'); });
+  root.querySelectorAll('.dv-mwrap > .dv-btn').forEach(b => b.onclick = e => {
+    e.stopPropagation(); const m = b.nextElementSibling, open = m.hidden; closeMenus();
+    if (open) { m.hidden = false; b.setAttribute('aria-expanded', 'true'); m.querySelector('button').focus(); }
+  });
+  root.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { closeMenus(); $('#dv-' + b.dataset.pick).click(); });
+  const onDocClick = e => { if (!e.target.closest?.('.dv-mwrap')) closeMenus(); };
+  document.addEventListener('click', onDocClick);
   const toggleLayout = () => {
     if (S.layout === 1) {
       setLayout(2);
@@ -516,13 +526,14 @@ export function mount(root) {
     $('#dv-app').hidden = true; $('#dv-drop').hidden = false; $('#dv-drop').classList.remove('err'); $('#dv-drop small').textContent = 'Files open on this device only. Nothing is uploaded or stored.';
   };
   $('#dv-close').onclick = closeAll;
-  $('#dv-pick').onclick = () => $('#dv-files').click(); $('#dv-pickdir').onclick = () => $('#dv-dir').click(); $('#dv-add').onclick = () => $('#dv-files').click();
+  $('#dv-pick').onclick = () => $('#dv-files').click(); $('#dv-pickdir').onclick = () => $('#dv-dir').click(); 
   $('#dv-files').onchange = e => { load(e.target.files); e.target.value = ''; };
   $('#dv-dir').onchange = e => { load(e.target.files); e.target.value = ''; };
   $('#dv-cfiles').onchange = e => { load(e.target.files, true); e.target.value = ''; };
   $('#dv-cdir').onchange = e => { load(e.target.files, true); e.target.value = ''; };
   const onKey = e => {
     if ($('#dv-app').hidden || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName) && document.activeElement.type !== 'range') return;
+    if (e.key === 'Escape' && root.querySelector('.dv-menu:not([hidden])')) { e.preventDefault(); closeMenus(); return; }
     if (e.key === 'Escape' && dvRoot.classList.contains('dv-max')) { e.preventDefault(); toggleFs(); return; }
     const vp = A(), s = S.series[vp.si];
     const act = { f: toggleFs, F: toggleFs, c: toggleLayout, C: toggleLayout, l: toggleLink, L: toggleLink, Tab: S.layout === 2 ? () => setActive(1 - S.active) : null }[e.key];
@@ -551,7 +562,7 @@ export function mount(root) {
   return {
     load,
     destroy() {
-      S.destroyed = true; stopPlay(); ro.disconnect(); document.removeEventListener('keydown', onKey); document.removeEventListener('fullscreenchange', onFs);
+      S.destroyed = true; stopPlay(); ro.disconnect(); document.removeEventListener('keydown', onKey); document.removeEventListener('fullscreenchange', onFs); document.removeEventListener('click', onDocClick);
       document.documentElement.classList.remove('dv-lock'); S.cache.clear();
     },
   };
