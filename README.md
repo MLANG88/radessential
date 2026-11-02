@@ -90,7 +90,7 @@ Then open the address it prints.
 
 ## DICOM viewer
 
-`radessential.com/viewer` opens DICOM files in the browser. Files never leave the user's device. It handles uncompressed, RLE, JPEG (8- and 12-bit), JPEG Lossless, JPEG-LS and JPEG 2000 data, multi-frame and colour images.
+`radessential.com/viewer` opens DICOM files in the browser. A second study can be loaded with **Compare study** and shown side by side, with linked scrolling. Files never leave the user's device. It handles uncompressed, RLE, JPEG (8- and 12-bit), JPEG Lossless, JPEG-LS and JPEG 2000 data, multi-frame and colour images.
 
 The source is in `viewer/src/`. The site serves a bundled copy from `assets/viewer/`, so the normal site build needs nothing extra. After changing anything in `viewer/src/`, rebuild the bundle and commit it:
 
