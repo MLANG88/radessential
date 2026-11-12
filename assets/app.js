@@ -697,53 +697,67 @@ body:`${T(['Type','T1','T2','Histology'],[
 ${N('Type 1 can mimic discitis–osteomyelitis. Favor infection when the disc is T2 hyperintense and enhancing, endplates are eroded, and there is paraspinal or epidural soft tissue. DWI "claw sign" favors degenerative change.')}`,
 refs:[{c:'Modic MT, Steinberg PM, Ross JS, Masaryk TJ, Carter JR. Degenerative disk disease: assessment of changes in vertebral body marrow with MR imaging. Radiology. 1988;166:193–199.',q:'Modic Steinberg Ross degenerative disk disease vertebral body marrow MR imaging'}],rp:'Modic changes'});
 
-add({id:'cervical-stenosis',sec:'msk',title:'Cervical stenosis grading',alias:'cervical spinal canal stenosis central foraminal neural foramen kang kim park myelopathy cord compression grade',ver:'Kang 2011 · Kim 2015',tags:['MRI','Spine'],
-lede:'Central canal: Kang grades 0–3 on sagittal T2, driven by what happens to the cord. Foramina: grade on axial T2 against the width of the extraforaminal root (Kim), or on oblique sagittal T2 by perineural fat (Park).',
-body:`${ILLUS(['fig-stenosis-cervical-canal.svg','Kang grades for cervical central canal stenosis (schematic, sagittal T2)'])}
-<h3>Central canal: Kang (sagittal T2)</h3>
-${T(['Grade','Finding','Severity'],[
- ['0','No canal stenosis',B('None','ok')],
- ['1','Obliteration of more than 50% of the subarachnoid space, no cord deformity',B('Mild','warn')],
- ['2','Cord deformity, no cord signal change',B('Moderate','warn')],
- ['3','Increased T2 signal in the cord at the compressed level',B('Severe','crit')]])}
-${P(['Grade on what the cord shows: a cord deformed by a disc or thickened ligament is grade 2 even if a thin CSF cleft remains between them.','Any cord signal change at the level is grade 3, whatever the degree of CSF effacement.','Inter-reader agreement for the 4 grades was good (ICC 0.72–0.80); agreement for cord signal change alone was best (κ 0.70–0.73).'])}
-<h3>Foramina: Kim (axial T2)</h3>
-${ILLUS(['fig-stenosis-cervical-foramen.svg','Kim grades for cervical foraminal stenosis (schematic, axial T2)'])}
-${T(['Grade','Narrowest foramen vs extraforaminal root width','Severity'],[
- ['0','Wider than the extraforaminal root',B('None','ok')],
- ['1','Equal to or narrower than the root, but more than 50% of its width',B('Non-severe','warn')],
- ['2','50% of the root width or less',B('Severe','crit')]])}
-${N('The extraforaminal root (between the superior articular process and vertebral artery) is the internal reference because it is usually spared by uncovertebral osteophytes. If it is not visible, use the contralateral root or the distance from the vertebral artery to the superior articular process.')}
-<h3>Foramina: Park (oblique sagittal T2)</h3>
-${ILLUS(['fig-stenosis-cervical-foramen-park.svg','Park grades for cervical foraminal stenosis (schematic, oblique sagittal T2)'])}
-${T(['Grade','Finding at the point of maximal narrowing','Severity'],[
- ['0','No perineural fat obliteration',B('None','ok')],
- ['1','Fat obliteration of less than 50% of the root circumference, no root deformity',B('Mild','warn')],
- ['2','Fat obliteration of more than 50% of the root circumference, no root deformity',B('Moderate','warn')],
- ['3','Root collapse or morphologic change',B('Severe','crit')]])}
-${P(['Park requires oblique sagittal images angled 45° along the foramina, which add about 3 minutes to the scan. Use Kim when only routine axials are available.','Because the cervical foramina change orientation from C2–3 to C7–T1, no single oblique plane is perpendicular to every foramen; Kim and colleagues prefer axial grading to avoid overestimating stenosis.','Neither system perfectly predicts radiculopathy: correlate with the side and level of symptoms.'])}
+add({id:'cervical-stenosis',sec:'msk',title:'Cervical stenosis grading',alias:'cervical spinal canal stenosis central foraminal neural foramen kang kim park mamlouk kaiser myelopathy cord compression mild moderate severe grade',ver:'KP NorCal (Mamlouk) 2019 · Kang 2011',tags:['MRI','Spine'],
+lede:'Report the central canal and each foramen as normal, mild, moderate or severe. The central canal is graded on CSF effacement and cord compression, the foramina on how much of the foramen is effaced at the nerve level. Cord signal is reported separately.',
+body:`${ILLUS(['fig-stenosis-cervical-canal.svg','Cervical central canal stenosis grades (schematic, sagittal T2)'])}
+<h3>Central canal (sagittal and axial T2)</h3>
+${T(['Grade','Finding'],[
+ [B('Normal','ok'),'No CSF effacement'],
+ [B('Mild','warn'),'Partial CSF effacement: ventral, dorsal, or both'],
+ [B('Moderate','warn'),'Complete CSF effacement, with or without slight cord indentation'],
+ [B('Severe','crit'),'Complete CSF effacement and frank cord compression']])}
+${N('Myelopathy (T2 cord signal change) can occur with moderate or severe stenosis. Report it separately from the stenosis grade.')}
+<h3>Foramina (axial T2)</h3>
+${ILLUS(['fig-stenosis-cervical-foramen.svg','Cervical foraminal stenosis grades (schematic, axial T2)'])}
+${T(['Grade','Finding at the nerve level'],[
+ [B('Normal','ok'),'No foraminal effacement'],
+ [B('Mild','warn'),'Less than 50% of the foramen effaced'],
+ [B('Moderate','warn'),'More than 50% of the foramen effaced'],
+ [B('Severe','crit'),'Complete foraminal effacement']])}
+${P(['Estimate the percentage as an average of the few axial slices at the level of the exiting nerve, not the single worst slice.','This scheme was written for consistent reporting across a multi-hospital network; its authors note there is no gold standard. The validated systems below are useful for research or when a clinician asks for a named grade.'])}
+<h3>Published grading systems</h3>
+<p><b>Kang (central canal, sagittal T2).</b></p>
+${T(['Grade','Finding'],[
+ ['0','No canal stenosis'],
+ ['1','Obliteration of more than 50% of the subarachnoid space, no cord deformity'],
+ ['2','Cord deformity, no cord signal change'],
+ ['3','Increased T2 signal in the cord at the compressed level']])}
+<p><b>Kim (foramina, axial T2).</b> Narrowest foramen compared with the width of the extraforaminal root.</p>
+${T(['Grade','Finding'],[
+ ['0','Foramen wider than the extraforaminal root'],
+ ['1','Equal to or narrower than the root, but more than 50% of its width'],
+ ['2','50% of the root width or less']])}
+<p><b>Park (foramina, oblique sagittal T2).</b> At the point of maximal narrowing.</p>
+${T(['Grade','Finding'],[
+ ['0','No perineural fat obliteration'],
+ ['1','Fat obliteration of less than 50% of the root circumference, no root deformity'],
+ ['2','Fat obliteration of more than 50% of the root circumference, no root deformity'],
+ ['3','Root collapse or morphologic change']])}
+${P(['Kang inter-reader agreement was good (ICC 0.72–0.80); agreement for cord signal change alone was best (κ 0.70–0.73).','Park needs oblique sagittal images angled 45° along the foramina (about 3 extra minutes). Because foraminal orientation changes from C2–3 to C7–T1, Kim and colleagues prefer axial grading to avoid overestimating stenosis.'])}
 <h3>Quantitative measures</h3>
 ${T(['Measure','Threshold','Note'],[
  ['Torg–Pavlov ratio (lateral radiograph)','&lt;0.8 suggests developmental stenosis','Low positive predictive value'],
  ['Cord compression ratio (AP ÷ transverse cord diameter, axial)','&lt;0.436','Associated with unfavorable prognosis in myelopathy'],
  ['Cord cross-sectional area','&lt;45 mm²','Associated with poor functional outcome']])}`,
-refs:[{c:'Kang Y, Lee JW, Koh YH, et al. New MRI grading system for the cervical canal stenosis. AJR Am J Roentgenol. 2011;197(1):W134–W140. doi:10.2214/AJR.10.5560',q:'Kang new MRI grading system for the cervical canal stenosis'},
+refs:[{c:'Mamlouk MD. Cervical spine stenosis reporting guide, Kaiser Permanente Northern California. Posted on X, 15 October 2019. <a href="https://x.com/MarkMamloukMD/status/1183958461886808064" target="_blank" rel="noopener">x.com/MarkMamloukMD ↗</a>'},
+ {c:'Kang Y, Lee JW, Koh YH, et al. New MRI grading system for the cervical canal stenosis. AJR Am J Roentgenol. 2011;197(1):W134–W140. doi:10.2214/AJR.10.5560',q:'Kang new MRI grading system for the cervical canal stenosis'},
  {c:'Kim S, Lee JW, Chai JW, et al. A new MRI grading system for cervical foraminal stenosis based on axial T2-weighted images. Korean J Radiol. 2015;16(6):1294–1302. doi:10.3348/kjr.2015.16.6.1294',q:'new MRI grading system cervical foraminal stenosis axial T2-weighted images'},
  {c:'Park HJ, Kim SS, Lee SY, et al. A practical MRI grading system for cervical foraminal stenosis based on oblique sagittal images. Br J Radiol. 2013;86(1025):20120515. doi:10.1259/bjr.20120515',q:'practical MRI grading system cervical foraminal stenosis oblique sagittal images'},
  {c:'Seo J, Lee JW. Magnetic resonance imaging grading systems for central canal and neural foraminal stenoses of the lumbar and cervical spines with a focus on the Lee grading system. Korean J Radiol. 2023;24(3):224–234. doi:10.3348/kjr.2022.0351',q:'Magnetic resonance imaging grading systems central canal neural foraminal stenoses Lee grading system'},
  {c:'Zileli M, Borkar SA, Sinha S, et al. Cervical spondylotic myelopathy: natural course and the value of diagnostic techniques – WFNS Spine Committee recommendations. Neurospine. 2019;16(3):386–402. doi:10.14245/ns.1938240.120',q:'Cervical spondylotic myelopathy natural course value of diagnostic techniques WFNS'}],rp:'Kang grading system of cervical canal stenosis'});
 
-add({id:'thoracic-stenosis',sec:'msk',title:'Thoracic stenosis grading',alias:'thoracic spinal canal stenosis cord compression ossified ligamentum flavum opll epidural metastasis bilsky escc grade',ver:'No validated system · Bilsky 2010 for tumor',tags:['MRI','Spine'],
-lede:'There is no grading system developed or validated for degenerative thoracic stenosis. Describe the cord the way the cervical Kang grades do, name the cause, and use the Bilsky scale when the compression is epidural tumor.',
-body:`${N('<b>Read this first.</b> The validated stenosis grades (Kang, Lee, Kim, Park, Schizas) were all developed in the cervical or lumbar spine. The table below applies the cervical cord-based descriptors to the thoracic cord as a reporting convention; it has not been validated at thoracic levels.')}
+add({id:'thoracic-stenosis',sec:'msk',title:'Thoracic stenosis grading',alias:'thoracic spinal canal stenosis cord compression ossified ligamentum flavum opll epidural metastasis bilsky escc grade mild moderate severe',ver:'No validated system · Bilsky 2010 for tumor',tags:['MRI','Spine'],
+lede:'No grading system has been developed or validated for degenerative thoracic stenosis. Describe the cord the same way as in the cervical spine, name the cause, and use the Bilsky scale when the compression is epidural tumor.',
+body:`${N('<b>Read this first.</b> The stenosis grades on this site were developed in the cervical or lumbar spine. The table below applies the cervical central canal descriptors to the thoracic cord as a reporting convention; it has not been validated at thoracic levels.')}
 <h3>Central canal: describe the cord</h3>
-${T(['Descriptor','Finding (sagittal and axial T2)','Equivalent cervical grade'],[
- ['Mild','Effacement of more than half of the subarachnoid space, cord not deformed','Kang 1'],
- ['Moderate','Cord deformed or flattened, no signal change','Kang 2'],
- ['Severe','Increased T2 signal in the cord at the level','Kang 3']])}
-${P(['Name the cause and its position: ossified ligamentum flavum (posterior), ossified posterior longitudinal ligament or disc–osteophyte (anterior), facet hypertrophy (posterolateral). The cause usually drives the surgical approach.','Check CT for ossification when MRI shows a low-signal compressive mass: ossified ligamentum flavum and OPLL are much easier to characterise on CT.'])}
+${T(['Grade','Finding (sagittal and axial T2)'],[
+ [B('Normal','ok'),'No CSF effacement'],
+ [B('Mild','warn'),'Partial CSF effacement: ventral, dorsal, or both'],
+ [B('Moderate','warn'),'Complete CSF effacement, with or without slight cord indentation'],
+ [B('Severe','crit'),'Complete CSF effacement and frank cord compression']])}
+${P(['Report T2 cord signal change separately from the grade.','Name the cause and its position: ossified ligamentum flavum (posterior), ossified posterior longitudinal ligament or disc–osteophyte (anterior), facet hypertrophy (posterolateral).','Check CT when MRI shows a low-signal compressive mass: ossified ligamentum flavum and OPLL are much easier to characterise on CT.'])}
 <h3>Foramina</h3>
-${N('No thoracic foraminal grading system exists. Thoracic radiculopathy is uncommon; if reported, describe perineural fat obliteration and any root deformity using the same principles as the lumbar Lee foraminal grades, and say that the descriptor is not validated at this level.')}
+${N('No thoracic foraminal grading system exists. If reported, describe fat effacement and any root deformity as for the lumbar foramina, and say the descriptor is not validated at this level.')}
 <h3>Epidural tumor: Bilsky epidural spinal cord compression scale</h3>
 ${T(['Grade','Axial T2 at the most compressed level','Group'],[
  ['0','Bone-only disease',B('Low','ok')],
@@ -754,45 +768,53 @@ ${T(['Grade','Axial T2 at the most compressed level','Group'],[
  ['3','Spinal cord compressed, no CSF visible around the cord',B('High','crit')]])}
 ${P(['Without mechanical instability, grades 0–1b are usually treated with radiation first; grades 2–3 usually need surgical decompression before radiation unless the tumor is highly radiosensitive. Management of 1c is debated.','T2-weighted axial images gave the best inter- and intra-rater reliability; T1 and post-contrast images were less reliable for grading.'])}`,
 refs:[{c:'Bilsky MH, Laufer I, Fourney DR, et al. Reliability analysis of the epidural spinal cord compression scale. J Neurosurg Spine. 2010;13(3):324–328. doi:10.3171/2010.3.SPINE09459',q:'Reliability analysis of the epidural spinal cord compression scale'},
- {c:'Kang Y, Lee JW, Koh YH, et al. New MRI grading system for the cervical canal stenosis. AJR Am J Roentgenol. 2011;197(1):W134–W140. doi:10.2214/AJR.10.5560',q:'Kang new MRI grading system for the cervical canal stenosis'},
+ {c:'Mamlouk MD. Cervical spine stenosis reporting guide, Kaiser Permanente Northern California. Posted on X, 15 October 2019. <a href="https://x.com/MarkMamloukMD/status/1183958461886808064" target="_blank" rel="noopener">x.com/MarkMamloukMD ↗</a>'},
  {c:'Chen ZQ, Sun CG. Clinical guideline for treatment of symptomatic thoracic spinal stenosis. Orthop Surg. 2015;7(3):208–212. doi:10.1111/os.12190',q:'Clinical guideline for treatment of symptomatic thoracic spinal stenosis'}],rp:'epidural spinal cord compression scale'});
 
-add({id:'lumbar-stenosis',sec:'msk',title:'Lumbar stenosis grading',alias:'lumbar spinal canal stenosis central foraminal lateral recess subarticular lee schizas lurie bartynski cauda equina neural foramen grade',ver:'Lee 2010–2011 · Schizas 2010',tags:['MRI','Spine'],
-lede:'Central canal: Lee grades 0–3 on axial T2 by how crowded the cauda equina is. Foramina: Lee grades 0–3 on sagittal T1 by perineural fat and root deformity. Lateral recess: Bartynski grades 0–3.',
-body:`${ILLUS(['fig-stenosis-lumbar-central.svg','Lee grades for lumbar central canal stenosis (schematic, axial T2)'])}
-<h3>Central canal: Lee (axial T2)</h3>
-${T(['Grade','Finding','Severity'],[
- ['0','Anterior CSF space not obliterated',B('None','ok')],
- ['1','Anterior CSF space mildly obliterated; all roots of the cauda equina clearly separated',B('Mild','warn')],
- ['2','Anterior CSF space moderately obliterated; some roots aggregated and cannot be separated',B('Moderate','warn')],
- ['3','Marked compression of the dural sac; the cauda equina is one bundle with no roots separable',B('Severe','crit')]])}
-${P(['Grade 0 vs 1 is the hard call: use consecutive sagittal T2 images to see whether the ventral CSF is obliterated.','CSF flow artifact can mimic clumped roots and over-grade the stenosis.','Bright signal in the canal around a collapsed sac (epidural fat, synovial cyst) is not CSF: if the roots form one bundle it is still grade 3.'])}
-<h3>Central canal: alternatives</h3>
+add({id:'lumbar-stenosis',sec:'msk',title:'Lumbar stenosis grading',alias:'lumbar spinal canal stenosis central foraminal lateral recess subarticular lee schizas lurie bartynski mamlouk kaiser cauda equina neural foramen mild moderate severe grade',ver:'KP NorCal (Mamlouk) 2017 · Lee 2010–2011',tags:['MRI','Spine'],
+lede:'Report the central canal and each foramen as normal, mild, moderate or severe. The central canal is graded on CSF effacement and crowding of the cauda equina, the foramina on effacement of the perineural fat and deformity of the nerve.',
+body:`${ILLUS(['fig-stenosis-lumbar-central.svg','Lumbar central canal stenosis grades (schematic, axial T2)'])}
+<h3>Central canal (axial T2)</h3>
+${T(['Grade','Finding'],[
+ [B('Normal','ok'),'No CSF effacement'],
+ [B('Mild','warn'),'Some CSF effacement; cauda equina nerve roots clearly separable'],
+ [B('Moderate','warn'),'Aggregation of the nerve roots with near-total CSF effacement'],
+ [B('Severe','crit'),'Total CSF effacement and deformity of the thecal sac']])}
+${P(['Normal vs mild is the hard call: use consecutive sagittal T2 images to see whether the ventral CSF is effaced.','CSF flow artifact can mimic clumped roots and over-grade the stenosis.','Bright signal around a collapsed sac (epidural fat, synovial cyst) is not CSF: if the roots form one bundle it is severe.'])}
+<h3>Foramina (sagittal T1)</h3>
+${ILLUS(['fig-stenosis-lumbar-foramen.svg','Lumbar foraminal stenosis grades (schematic, sagittal T1)'])}
+${T(['Grade','Finding'],[
+ [B('Normal','ok'),'No fat effacement; keyhole appearance of the foramen'],
+ [B('Mild','warn'),'Some fat effacement in the vertical (craniocaudal) or transverse (anteroposterior) direction'],
+ [B('Moderate','warn'),'Near-total effacement of fat'],
+ [B('Severe','crit'),'Total effacement of fat and/or deformity of the nerve']])}
+${P(['A deformed or collapsed root is severe even if some fat remains, for example the vertically squashed root of isthmic spondylolisthesis.','This scheme was written for consistent reporting across a multi-hospital network and is based on the Lee and Wildermuth systems below.'])}
+<h3>Published grading systems</h3>
+<p><b>Lee (central canal, axial T2).</b></p>
+${T(['Grade','Finding'],[
+ ['0','Anterior CSF space not obliterated'],
+ ['1','Anterior CSF space mildly obliterated; all roots clearly separated'],
+ ['2','Anterior CSF space moderately obliterated; some roots aggregated and cannot be separated'],
+ ['3','Marked compression of the dural sac; the cauda equina is one bundle']])}
+<p><b>Lee (foramina, sagittal T1).</b></p>
+${T(['Grade','Finding'],[
+ ['0','Perineural fat surrounds the root'],
+ ['1','Fat obliterated in one opposing pair of directions (vertical or transverse), root not deformed'],
+ ['2','Fat obliterated in all four directions, root not deformed'],
+ ['3','Nerve root collapse or morphologic change']])}
 ${T(['System','Grades'],[
- ['Schizas (axial T2)','<b>A</b> no or minor stenosis, CSF clearly visible (A1–A4 by rootlet position) · <b>B</b> moderate: rootlets fill the sac but can still be individualised, grainy CSF · <b>C</b> severe: no rootlets recognisable, homogeneous grey sac, posterior epidural fat preserved · <b>D</b> extreme: as C, and posterior epidural fat obliterated'],
- ['Lurie / Lumbar Disc Nomenclature 2.0','Compromise of the canal area: <b>mild</b> ≤⅓ · <b>moderate</b> ⅓–⅔ · <b>severe</b> &gt;⅔']])}
-${N('Schizas grades C and D were more likely to fail conservative treatment; A and B less likely to need surgery. A multidisciplinary consensus named both the CSF–rootlet relationship and compromise in thirds as core items for structured lumbar stenosis reports.')}
-<h3>Foramina: Lee (sagittal T1)</h3>
-${ILLUS(['fig-stenosis-lumbar-foramen.svg','Lee grades for lumbar foraminal stenosis (schematic, sagittal T1)'])}
-${T(['Grade','Finding','Severity'],[
- ['0','Perineural fat surrounds the root',B('None','ok')],
- ['1','Fat obliterated in one opposing pair of directions (vertical or transverse), root not deformed',B('Mild','warn')],
- ['2','Fat obliterated in all four directions, root not deformed',B('Moderate','warn')],
- ['3','Nerve root collapse or morphologic change',B('Severe','crit')]])}
-${P(['Fat lost on one side only, with the opposite side preserved, is not foraminal stenosis.','A collapsed or deformed root is grade 3 even if some fat remains, for example the vertically squashed root of isthmic spondylolisthesis.','Inter-reader agreement was near perfect (κ 0.91–1.0).'])}
-<h3>Lateral recess (subarticular zone): Bartynski</h3>
-${T(['Grade','Finding','Severity'],[
- ['0','Normal recess, no root compression',B('None','ok')],
- ['1','Recess narrowed, no root compression',B('Mild','warn')],
- ['2','Recess narrowed (angular or trefoil) with root flattened or widened; CSF still surrounds the root',B('Moderate','warn')],
- ['3','Severe root compression, CSF obliterated from the recess',B('Severe','crit')]])}
-${N('In the surgically confirmed series, MRI underestimated lateral recess root compression in 28–29% of cases. An AP dimension of the recess under about 4 mm suggests narrowing but is not part of the grade definitions.')}
+ ['Schizas (central, axial T2)','<b>A</b> no or minor stenosis, CSF clearly visible (A1–A4 by rootlet position) · <b>B</b> moderate: rootlets fill the sac but can still be individualised · <b>C</b> severe: no rootlets recognisable, posterior epidural fat preserved · <b>D</b> extreme: as C, and posterior epidural fat obliterated'],
+ ['Lurie / Lumbar Disc Nomenclature 2.0 (central)','Compromise of the canal area: <b>mild</b> ≤⅓ · <b>moderate</b> ⅓–⅔ · <b>severe</b> &gt;⅔'],
+ ['Bartynski (lateral recess)','<b>0</b> normal · <b>1</b> narrowed, no root compression · <b>2</b> narrowed (angular or trefoil), root flattened or widened, CSF still around the root · <b>3</b> severe root compression, CSF obliterated from the recess']])}
+${N('A multidisciplinary consensus named the CSF–cauda equina relationship and compromise of the central zone as core items for structured lumbar stenosis reports. MRI underestimated surgically confirmed lateral recess root compression in 28–29% of cases.')}
 <h3>Quantitative measures</h3>
 ${T(['Measure','Suggests stenosis','Limitation'],[
  ['AP diameter of the dural sac','&lt;10 mm','Ignores how many roots remain at that level'],
  ['Dural sac cross-sectional area','&lt;100 mm²','At L5–S1 few roots remain, so a small sac may not compress them']])}`,
-refs:[{c:'Lee GY, Lee JW, Choi HS, Oh KJ, Kang HS. A new grading system of lumbar central canal stenosis on MRI: an easy and reliable method. Skeletal Radiol. 2011;40(8):1033–1039. doi:10.1007/s00256-011-1102-x',q:'new grading system of lumbar central canal stenosis on MRI easy and reliable method'},
+refs:[{c:'Mamlouk MD. Lumbar stenosis reporting guide, Kaiser Permanente Northern California. Posted on X, 28 March 2017. <a href="https://x.com/MarkMamloukMD/status/846567613991833600" target="_blank" rel="noopener">x.com/MarkMamloukMD ↗</a>'},
+ {c:'Lee GY, Lee JW, Choi HS, Oh KJ, Kang HS. A new grading system of lumbar central canal stenosis on MRI: an easy and reliable method. Skeletal Radiol. 2011;40(8):1033–1039. doi:10.1007/s00256-011-1102-x',q:'new grading system of lumbar central canal stenosis on MRI easy and reliable method'},
  {c:'Lee S, Lee JW, Yeom JS, et al. A practical MRI grading system for lumbar foraminal stenosis. AJR Am J Roentgenol. 2010;194(4):1095–1098. doi:10.2214/AJR.09.2772',q:'practical MRI grading system for lumbar foraminal stenosis'},
+ {c:'Wildermuth S, Zanetti M, Duewell S, et al. Lumbar spine: quantitative and qualitative assessment of positional (upright flexion and extension) MR imaging and myelography. Radiology. 1998;207(2):391–398. doi:10.1148/radiology.207.2.9577486',q:'Wildermuth lumbar spine positional upright flexion extension MR imaging myelography'},
  {c:'Schizas C, Theumann N, Burn A, et al. Qualitative grading of severity of lumbar spinal stenosis based on the morphology of the dural sac on magnetic resonance images. Spine. 2010;35(21):1919–1924. doi:10.1097/BRS.0b013e3181d359bd',q:'Qualitative grading of severity of lumbar spinal stenosis morphology of the dural sac'},
  {c:'Bartynski WS, Lin L. Lumbar root compression in the lateral recess: MR imaging, conventional myelography, and CT myelography comparison with surgical confirmation. AJNR Am J Neuroradiol. 2003;24(3):348–360.',q:'Lumbar root compression in the lateral recess MR imaging conventional myelography'},
  {c:'Lurie JD, Tosteson AN, Tosteson TD, et al. Reliability of readings of magnetic resonance imaging features of lumbar spinal stenosis. Spine. 2008;33(14):1605–1610. doi:10.1097/BRS.0b013e3181791af3',q:'Reliability of readings of magnetic resonance imaging features of lumbar spinal stenosis'},

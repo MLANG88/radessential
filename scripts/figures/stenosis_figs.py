@@ -190,6 +190,12 @@ def lumbar_central(push, squeeze, roots):
                 a = 2 * math.pi * k / 10
                 dot(cx + 11 * math.cos(a), top_y + (bot_y - top_y) * 0.6 + 7 * math.sin(a), 5.2)
             dot(cx, top_y + (bot_y - top_y) * 0.6, 5.2)
+        elif roots == 'aggregate':  # roots clumped, only a thin rim of CSF left
+            inner = [(cx + (x - cx) * 0.8, (top_y + bot_y) / 2 + (y - (top_y + bot_y) / 2) * 0.72) for x, y in pts]
+            s.append(poly(inner, '#5d6b75'))
+            for k in range(12):
+                a = 2 * math.pi * k / 12
+                dot(cx + rx * 0.42 * math.cos(a), (top_y + bot_y) / 2 + 3 + (bot_y - top_y) * 0.2 * math.sin(a), 4.6)
         else:  # cauda equina as one bundle filling the compressed sac, no CSF between roots
             s.append(poly(pts, '#5d6b75', '#7fb0c4', 1.6))
             for k in range(7):
@@ -211,7 +217,7 @@ def fig_lumbar_central():
 
 
 # ---------- 4. Neural foramen, sagittal (Lee lumbar; Park cervical) ----------
-def foramen_sag(sides, deform=False, partial=None):
+def foramen_sag(sides, deform=False, partial=None, rim=None):
     """Sagittal neural foramen (anterior = left). The exiting root sits in the upper foramen, ringed by fat.
     sides: subset of 'udap' (up, down, anterior, posterior) where the fat is obliterated (Lee).
     partial: fraction 0–1 of the root circumference with fat obliterated, centred posteriorly (Park)."""
@@ -235,13 +241,16 @@ def foramen_sag(sides, deform=False, partial=None):
             for k in sides:
                 d = math.atan2(math.sin(t - dirs[k]), math.cos(t - dirs[k]))
                 r = min(r, rr + 1.5 + (r - rr - 1.5) * (1 - math.exp(-(d / 0.5) ** 2)))
+            if rim is not None:
+                return rr + rim
             if partial:
                 d = abs(math.atan2(math.sin(t), math.cos(t)))
                 if d < math.pi * partial:
                     r = rr + 1.5
             return r
         pts = [(cx + R(2 * math.pi * i / 180) * math.cos(2 * math.pi * i / 180), cy - R(2 * math.pi * i / 180) * math.sin(2 * math.pi * i / 180)) for i in range(180)]
-        s.append(poly(pts, FAT, '#c9ad55', 1.4))
+        if rim != 0:
+            s.append(poly(pts, FAT, '#c9ad55', 1.4))
         s.append(f'<path d="M{x0:.1f},{cy + 48:.1f} L{cx - 18:.1f},{cy + 48:.1f} Q{cx - 4:.1f},{cy + 50:.1f} {cx - 6:.1f},{cy + 70:.1f} L{cx - 10:.1f},{cy + 96:.1f} L{x0:.1f},{cy + 96:.1f} Z" fill="{DISC}" stroke="{LIG}" stroke-width="1.2"/>')
         s.append(text(x0 + 10, cy + 78, 'disc', 12, 600, '#4b5a64'))
         rx, ry = (rr + 8, rr - 8) if deform else (rr, rr)
@@ -270,9 +279,80 @@ def fig_cervical_foramen_park():
     ])
 
 
+# ---------- Kaiser Permanente Northern California reporting scheme (Mamlouk) ----------
+KP = 'Normal / mild / moderate / severe, as in the Kaiser Permanente Northern California reporting guide (Mamlouk)'
+
+
+def cervical_foramen_kp(frac):
+    """Axial cervical foramen at the nerve level; frac = fraction of the foramen effaced."""
+    def body(x0, y0, w, h):
+        s = []
+        cy = y0 + h / 2 + 4
+        x_in, x_out = x0 + 46, x0 + w - 10
+        mid = x0 + w * 0.5
+        H = 30                                   # normal half-height of the foramen
+        gap_half = max(0.0, H * (1 - frac))
+        s.append(f'<rect x="{x0 + 6:.1f}" y="{cy - 70:.1f}" width="{x_in - x0 - 6:.1f}" height="140" rx="10" fill="{CSF}"/>')
+        s.append(f'<rect x="{x0 + 6:.1f}" y="{cy - 46:.1f}" width="22" height="92" rx="10" fill="{CORD}"/>')
+        xs = [x_in + i * (x_out - x_in) / 80 for i in range(81)]
+        half = lambda x: gap_half + (H - gap_half) * (1 - math.exp(-((x - mid) / 30) ** 2))
+        # foramen contents (fat and veins) then walls
+        s.append(poly([(x, cy - H) for x in xs] + [(x, cy + H) for x in xs][::-1], FAT))
+        s.append(poly([(x_in, cy - 95)] + [(x, cy - half(x)) for x in xs] + [(x_out, cy - 95)], BONE, BONE_LN))
+        s.append(poly([(x_in, cy + 95)] + [(x, cy + half(x)) for x in xs] + [(x_out, cy + 95)], BONE, BONE_LN))
+        s.append(text(mid, cy - 76, 'Uncovertebral joint', 11.5, 600, MUTED, 'middle'))
+        s.append(text(mid, cy + 90, 'Facet (superior articular process)', 11.5, 600, MUTED, 'middle'))
+        rw = 16
+        rt = [cy - max(1.2, min(rw / 2, half(x) - 1)) for x in xs]
+        rb = [cy + max(1.2, min(rw / 2, half(x) - 1)) for x in xs]
+        s.append(poly(list(zip(xs, rt)) + list(zip(xs, rb))[::-1], ROOT))
+        # dashed outline of the normal foramen at the nerve level
+        s.append(f'<rect x="{mid - 26:.1f}" y="{cy - H:.1f}" width="52" height="{2 * H}" fill="none" stroke="#d92d20" stroke-width="1.6" stroke-dasharray="5 4"/>')
+        lab = 'no effacement' if frac == 0 else ('complete effacement' if frac >= 1 else f'≈{round(frac * 100)}% effaced')
+        s.append(text(mid, y0 + 18, lab, 13, 700, '#d92d20', 'middle'))
+        s.append(text(x0 + 10, cy - 76, 'Canal', 11, 700, MUTED))
+        return '\n'.join(s)
+    return body
+
+
+def fig_cervical_canal_kp():
+    return frame('Cervical central canal stenosis', 'Sagittal T2 · ' + KP + ' · schematic', [
+        (0, 'Normal', ['No CSF effacement'], cervical_canal(3, 2, False, False)),
+        (1, 'Mild', ['Partial CSF effacement:', 'ventral, dorsal, or both'], cervical_canal(20, 16, False, False)),
+        (2, 'Moderate', ['Complete CSF effacement,', '± slight cord indentation'], cervical_canal(39, 39, True, False)),
+        (3, 'Severe', ['Complete CSF effacement and', 'frank cord compression'], cervical_canal(56, 50, True, False)),
+    ], note='Cord signal change (myelopathy) can occur with moderate or severe stenosis and is reported separately from the grade.')
+
+
+def fig_cervical_foramen_kp():
+    return frame('Cervical foraminal stenosis', 'Axial T2 at the nerve level · ' + KP + ' · schematic', [
+        (0, 'Normal', ['No foraminal effacement'], cervical_foramen_kp(0)),
+        (1, 'Mild', ['Less than 50% of the foramen', 'effaced at the nerve level'], cervical_foramen_kp(0.35)),
+        (2, 'Moderate', ['More than 50% of the foramen', 'effaced at the nerve level'], cervical_foramen_kp(0.72)),
+        (3, 'Severe', ['Complete foraminal', 'effacement'], cervical_foramen_kp(1.0)),
+    ], note='Judge the percentage as an average over the few axial slices at the level of the nerve. Dashed box = expected size of the foramen.')
+
+
+def fig_lumbar_central_kp():
+    return frame('Lumbar central canal stenosis', 'Axial T2 · ' + KP + ' · schematic', [
+        (0, 'Normal', ['No CSF effacement'], lumbar_central(4, 0, 'separate')),
+        (1, 'Mild', ['Some CSF effacement; nerve', 'roots clearly separable'], lumbar_central(28, 4, 'separate')),
+        (2, 'Moderate', ['Roots aggregated, near-total', 'CSF effacement'], lumbar_central(50, 16, 'aggregate')),
+        (3, 'Severe', ['Total CSF effacement', 'and sac deformity'], lumbar_central(68, 28, 'bundle')),
+    ], note='Based on Lee et al., Skeletal Radiol 2011. Use consecutive sagittal T2 images when normal vs mild is unclear.')
+
+
+def fig_lumbar_foramen_kp():
+    return frame('Lumbar foraminal stenosis', 'Sagittal T1 · ' + KP + ' · yellow = fat, dark = nerve root · schematic', [
+        (0, 'Normal', ['No fat effacement;', 'keyhole appearance'], foramen_sag('')),
+        (1, 'Mild', ['Some fat effacement in the', 'vertical or transverse direction'], foramen_sag('ud')),
+        (2, 'Moderate', ['Near-total effacement', 'of fat'], foramen_sag('', rim=4)),
+        (3, 'Severe', ['Total effacement of fat', 'and/or nerve deformity'], foramen_sag('', deform=True, rim=0)),
+    ], note='Based on Lee et al., AJR 2010 and Wildermuth et al., Radiology 1998. Mild panel shows vertical narrowing (pedicle above, disc below); transverse narrowing is graded the same.')
+
+
 os.makedirs(OUT, exist_ok=True)
-for name, fn in [('fig-stenosis-cervical-canal', fig_cervical_canal), ('fig-stenosis-cervical-foramen', fig_cervical_foramen),
-                 ('fig-stenosis-cervical-foramen-park', fig_cervical_foramen_park),
-                 ('fig-stenosis-lumbar-central', fig_lumbar_central), ('fig-stenosis-lumbar-foramen', fig_lumbar_foramen)]:
+for name, fn in [('fig-stenosis-cervical-canal', fig_cervical_canal_kp), ('fig-stenosis-cervical-foramen', fig_cervical_foramen_kp),
+                 ('fig-stenosis-lumbar-central', fig_lumbar_central_kp), ('fig-stenosis-lumbar-foramen', fig_lumbar_foramen_kp)]:
     open(os.path.join(OUT, name + '.svg'), 'w').write(fn())
     print(name)
